@@ -87,6 +87,7 @@ export default {
       },
       transitionProperty: {
         width: 'width',
+        left: 'left',
       },
     },
   },

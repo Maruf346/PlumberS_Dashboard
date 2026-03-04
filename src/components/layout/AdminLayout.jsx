@@ -1,40 +1,43 @@
 // src/components/layout/AdminLayout.jsx
-import { Outlet } from 'react-router-dom'
-import Sidebar    from './Sidebar'
-import TopHeader  from './TopHeader'
+import { Outlet }    from 'react-router-dom'
+import Sidebar       from './Sidebar'
+import TopHeader     from './TopHeader'
 import { useSidebar } from '@/hooks/useSidebar'
 
 export default function AdminLayout() {
-  const { isOpen, isMobile, toggle, close } = useSidebar()
+  const { isOpen, collapsed, isMobile, toggle, toggleCollapse, close } = useSidebar()
+
+  // Main content left offset:
+  //   Mobile  → 0 (sidebar overlays)
+  //   Tablet/Desktop collapsed → 72px
+  //   Desktop expanded → 256px
+  const mainLeft = isMobile
+    ? 'ml-0'
+    : collapsed
+      ? 'ml-[72px]'
+      : 'ml-[256px]'
 
   return (
-    <div className="min-h-screen bg-surface-subtle">
-      {/* ── Sidebar ── */}
+    <div className="min-h-screen bg-[#f1f5f9]">
       <Sidebar
         isOpen={isOpen}
+        collapsed={collapsed}
         isMobile={isMobile}
         onClose={close}
+        onToggleCollapse={toggleCollapse}
       />
 
-      {/* ── Top Header ── */}
-      <TopHeader onMenuToggle={toggle} />
+      <TopHeader
+        onMenuToggle={toggle}
+        sidebarCollapsed={collapsed}
+        isMobile={isMobile}
+      />
 
-      {/* ── Main content area ── */}
-      {/*
-        On desktop: offset left by sidebar width (256px), top by header height (61px).
-        On mobile: no left offset (sidebar overlays).
-      */}
-      <main
-        className={[
-          'min-h-screen pt-header',
-          'transition-all duration-300 ease-in-out',
-          isMobile ? 'ml-0' : 'ml-sidebar',
-        ].join(' ')}
-      >
-        {/*
-          Inner scrollable content wrapper.
-          Pages control their own padding/layout.
-        */}
+      <main className={[
+        'min-h-screen pt-[61px]',
+        'transition-[margin] duration-300 ease-in-out',
+        mainLeft,
+      ].join(' ')}>
         <div className="h-full min-h-[calc(100vh-61px)] overflow-auto">
           <Outlet />
         </div>
