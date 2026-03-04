@@ -29,7 +29,7 @@ export default function JobsActionMenu({ jobId, onDelete }) {
   }, [open])
 
   const handleView = (e) => { e.stopPropagation(); setOpen(false); navigate(`/admin/jobs/${jobId}`) }
-  const handleEdit = (e) => { e.stopPropagation(); setOpen(false); navigate(`/admin/jobs/${jobId}`) }
+  const handleEdit = (e) => { e.stopPropagation(); setOpen(false); navigate(`/admin/jobs/${jobId}/edit`) }
   const handleDelete = (e) => { e.stopPropagation(); setOpen(false); onDelete?.(jobId) }
 
   return (

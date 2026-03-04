@@ -1,5 +1,5 @@
 // src/components/jobdetails/JobDetailHeader.jsx
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 function IconArrowLeft() {
   return (
@@ -104,9 +104,12 @@ export default function JobDetailHeader({ job }) {
         <div className="w-px h-6 bg-[#e2e8f0]" />
 
         {/* Edit */}
-        <button className="flex items-center gap-1.5 px-3 py-[7px] rounded-[8px] border border-[#e2e8f0] bg-white hover:bg-[#f8fafc] text-[#314158] text-[13px] font-medium transition-colors">
+        <Link
+          to={`/admin/jobs/${job.id}/edit`}
+          className="flex items-center gap-1.5 px-3 py-[7px] rounded-[8px] border border-[#e2e8f0] bg-white hover:bg-[#f8fafc] text-[#314158] text-[13px] font-medium transition-colors"
+        >
           <IconEdit /> Edit
-        </button>
+        </Link>
 
         {/* Delete */}
         <button className="flex items-center gap-1.5 px-3 py-[7px] rounded-[8px] border border-[#ffe2e2] bg-[#fef2f2] hover:bg-[#ffe2e2] text-[#c10007] text-[13px] font-medium transition-colors">

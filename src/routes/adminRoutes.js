@@ -16,6 +16,7 @@ import JobDetailsPage      from '@/pages/jobdetails/JobDetailsPage'
 import FilePhotosPage      from '@/pages/filephotos/FilePhotosPage'
 import NotesPage           from '@/pages/notes/NotesPage'
 import CreateManagerPage   from '@/pages/createmanager/CreateManagerPage'
+import EditJobPage         from '@/pages/editjob/EditJobPage'
 
 /**
  * navItems — items that appear in the sidebar navigation.
@@ -82,7 +83,8 @@ export const routes = [
   { path: 'reports',        element: ReportsPage       },
   { path: 'settings',       element: SettingsPage      },
   { path: 'create-job',     element: CreateJobPage     },
-  { path: 'jobs/:jobId',    element: JobDetailsPage    },
+  { path: 'jobs/:jobId',      element: JobDetailsPage    },
+  { path: 'jobs/:jobId/edit', element: EditJobPage       },
   { path: 'jobs/:jobId/files',  element: FilePhotosPage  },
   { path: 'jobs/:jobId/notes',  element: NotesPage       },
   { path: 'create-manager', element: CreateManagerPage },
