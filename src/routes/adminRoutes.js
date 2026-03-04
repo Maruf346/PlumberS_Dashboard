@@ -5,18 +5,22 @@
 
 import DashboardPage       from '@/pages/dashboard/DashboardPage'
 import JobsPage            from '@/pages/jobs/JobsPage'
-// import SchedulePage        from '@/pages/schedule/SchedulePage'
-// import FleetPage           from '@/pages/fleet/FleetPage'
-// import SafetyFormsPage     from '@/pages/safety/SafetyFormsPage'
-// import EmployeesPage       from '@/pages/employees/EmployeesPage'
-// import ReportsPage         from '@/pages/reports/ReportsPage'
-// import SettingsPage        from '@/pages/settings/SettingsPage'
+import SchedulePage        from '@/pages/schedule/SchedulePage'
+import FleetPage           from '@/pages/fleet/FleetPage'
+import SafetyFormsPage     from '@/pages/safety/SafetyFormsPage'
+import EmployeesPage       from '@/pages/employees/EmployeesPage'
+import ReportsPage         from '@/pages/reports/ReportsPage'
+import SettingsPage        from '@/pages/settings/SettingsPage'
 import CreateJobPage       from '@/pages/createjob/CreateJobPage'
 import JobDetailsPage      from '@/pages/jobdetails/JobDetailsPage'
-// import FilePhotosPage      from '@/pages/filephotos/FilePhotosPage'
-// import NotesPage           from '@/pages/notes/NotesPage'
-// import CreateManagerPage   from '@/pages/createmanager/CreateManagerPage'
+import FilePhotosPage      from '@/pages/filephotos/FilePhotosPage'
+import NotesPage           from '@/pages/notes/NotesPage'
+import CreateManagerPage   from '@/pages/createmanager/CreateManagerPage'
 import EditJobPage         from '@/pages/editjob/EditJobPage'
+import ManagersPage         from '@/pages/managers/ManagersPage'
+import ManagerProfilePage   from '@/pages/managers/ManagerProfilePage'
+import StaffPage            from '@/pages/staff/StaffPage'
+import StaffProfilePage     from '@/pages/staff/StaffProfilePage'
 
 /**
  * navItems — items that appear in the sidebar navigation.
@@ -54,9 +58,14 @@ export const navItems = [
     icon:   'employees',
   },
   {
-    path:   'create-manager',
-    label:  'Create Manager',
-    icon:   'createManager',
+    path:   'managers',
+    label:  'Managers',
+    icon:   'managers',
+  },
+  {
+    path:   'staff',
+    label:  'Staff',
+    icon:   'staff',
   },
   {
     path:   'reports',
@@ -85,9 +94,13 @@ export const routes = [
   { path: 'create-job',     element: CreateJobPage     },
   { path: 'jobs/:jobId',      element: JobDetailsPage    },
   { path: 'jobs/:jobId/edit', element: EditJobPage       },
+  { path: 'managers',           element: ManagersPage       },
+  { path: 'managers/:managerId',element: ManagerProfilePage },
+  { path: 'staff',              element: StaffPage          },
+  { path: 'staff/:staffId',     element: StaffProfilePage   },
   // { path: 'jobs/:jobId/files',  element: FilePhotosPage  },
   // { path: 'jobs/:jobId/notes',  element: NotesPage       },
-  // { path: 'create-manager', element: CreateManagerPage },
+  { path: 'create-manager', element: CreateManagerPage },
 ]
 
 /**
@@ -103,5 +116,6 @@ export const pageTitles = {
   reports:          'Reports',
   settings:         'Settings',
   'create-job':     'Create Job',
-  'create-manager': 'Create Manager',
+  managers:          'Managers',
+  staff:             'Staff',
 }
