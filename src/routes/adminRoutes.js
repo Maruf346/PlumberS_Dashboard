@@ -5,17 +5,17 @@
 
 import DashboardPage       from '@/pages/dashboard/DashboardPage'
 import JobsPage            from '@/pages/jobs/JobsPage'
-import SchedulePage        from '@/pages/schedule/SchedulePage'
-import FleetPage           from '@/pages/fleet/FleetPage'
-import SafetyFormsPage     from '@/pages/safety/SafetyFormsPage'
-import EmployeesPage       from '@/pages/employees/EmployeesPage'
-import ReportsPage         from '@/pages/reports/ReportsPage'
-import SettingsPage        from '@/pages/settings/SettingsPage'
+// import SchedulePage        from '@/pages/schedule/SchedulePage'
+// import FleetPage           from '@/pages/fleet/FleetPage'
+// import SafetyFormsPage     from '@/pages/safety/SafetyFormsPage'
+// import EmployeesPage       from '@/pages/employees/EmployeesPage'
+// import ReportsPage         from '@/pages/reports/ReportsPage'
+// import SettingsPage        from '@/pages/settings/SettingsPage'
 import CreateJobPage       from '@/pages/createjob/CreateJobPage'
 import JobDetailsPage      from '@/pages/jobdetails/JobDetailsPage'
-import FilePhotosPage      from '@/pages/filephotos/FilePhotosPage'
-import NotesPage           from '@/pages/notes/NotesPage'
-import CreateManagerPage   from '@/pages/createmanager/CreateManagerPage'
+// import FilePhotosPage      from '@/pages/filephotos/FilePhotosPage'
+// import NotesPage           from '@/pages/notes/NotesPage'
+// import CreateManagerPage   from '@/pages/createmanager/CreateManagerPage'
 import EditJobPage         from '@/pages/editjob/EditJobPage'
 
 /**
@@ -76,18 +76,18 @@ export const navItems = [
 export const routes = [
   { path: 'dashboard',      element: DashboardPage     },
   { path: 'jobs',           element: JobsPage          },
-  { path: 'schedule',       element: SchedulePage      },
-  { path: 'fleet',          element: FleetPage         },
-  { path: 'safety-forms',   element: SafetyFormsPage   },
-  { path: 'employees',      element: EmployeesPage     },
-  { path: 'reports',        element: ReportsPage       },
-  { path: 'settings',       element: SettingsPage      },
+  // { path: 'schedule',       element: SchedulePage      },
+  // { path: 'fleet',          element: FleetPage         },
+  // { path: 'safety-forms',   element: SafetyFormsPage   },
+  // { path: 'employees',      element: EmployeesPage     },
+  // { path: 'reports',        element: ReportsPage       },
+  // { path: 'settings',       element: SettingsPage      },
   { path: 'create-job',     element: CreateJobPage     },
   { path: 'jobs/:jobId',      element: JobDetailsPage    },
   { path: 'jobs/:jobId/edit', element: EditJobPage       },
-  { path: 'jobs/:jobId/files',  element: FilePhotosPage  },
-  { path: 'jobs/:jobId/notes',  element: NotesPage       },
-  { path: 'create-manager', element: CreateManagerPage },
+  // { path: 'jobs/:jobId/files',  element: FilePhotosPage  },
+  // { path: 'jobs/:jobId/notes',  element: NotesPage       },
+  // { path: 'create-manager', element: CreateManagerPage },
 ]
 
 /**

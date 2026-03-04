@@ -14,7 +14,7 @@ import JobScopeTab              from '@/components/jobdetails/JobScopeTab'
 import FilesPhotosTab           from '@/components/jobdetails/FilesPhotosTab'
 import NotesTab                 from '@/components/jobdetails/NotesTab'
 
-import { JOB_DETAIL_MOCK }      from '@/data/jobDetailsMock'
+import { JOB_DETAIL_MOCK }      from '@/data/jobsMockData'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // JobDetailsPage
