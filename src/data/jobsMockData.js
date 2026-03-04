@@ -1,107 +1,60 @@
-// src/data/jobsMockData.js
-// Static mock data — replace with API response in Phase 4+
+// src/data/jobDetailsMock.js
 
-export const JOBS_MOCK = [
-  {
-    id:        'JB-1024',
-    client:    'Apex Industries',
-    address:   '14 Commerce Blvd, Downtown',
-    schedule:  'Jun 12, 2025 · 09:00 AM',
-    assignee:  'Mike Ross',
-    initial:   'M',
-    vehicle:   'Van-04',
-    status:    'In Progress',
-  },
-  {
-    id:        'JB-1025',
-    client:    'City Center Mall',
-    address:   '200 Mall Drive, Midtown',
-    schedule:  'Jun 12, 2025 · 11:00 AM',
-    assignee:  'Sarah Lee',
-    initial:   'S',
-    vehicle:   'Truck-02',
-    status:    'Pending',
-  },
-  {
-    id:        'JB-1023',
-    client:    'Westside Apartments',
-    address:   '88 Riverside Ave, West End',
-    schedule:  'Jun 11, 2025 · 02:00 PM',
-    assignee:  'John Doe',
-    initial:   'J',
-    vehicle:   'Van-01',
-    status:    'Completed',
-  },
-  {
-    id:        'JB-1022',
-    client:    'Harbor Warehouse',
-    address:   '5 Port Road, Harbor District',
-    schedule:  'Jun 10, 2025 · 08:00 AM',
-    assignee:  'David Kim',
-    initial:   'D',
-    vehicle:   'Truck-05',
-    status:    'Overdue',
-  },
-  {
-    id:        'JB-1026',
-    client:    'Tech Park',
-    address:   '300 Innovation Way, Tech Zone',
-    schedule:  'Jun 12, 2025 · 03:00 PM',
-    assignee:  'Emily Chen',
-    initial:   'E',
-    vehicle:   'Van-07',
-    status:    'In Progress',
-  },
-  {
-    id:        'JB-1027',
-    client:    'Grand Hotel',
-    address:   '1 Luxury Lane, City Centre',
-    schedule:  'Jun 13, 2025 · 10:00 AM',
-    assignee:  'Tom Baker',
-    initial:   'T',
-    vehicle:   'Van-03',
-    status:    'Pending',
-  },
-  {
-    id:        'JB-1028',
-    client:    'Riverside School',
-    address:   '42 School St, North Side',
-    schedule:  'Jun 13, 2025 · 01:00 PM',
-    assignee:  'Lisa Park',
-    initial:   'L',
-    vehicle:   'Truck-01',
-    status:    'Pending',
-  },
-  {
-    id:        'JB-1021',
-    client:    'Southgate Plaza',
-    address:   '77 Southern Cross Rd',
-    schedule:  'Jun 09, 2025 · 09:30 AM',
-    assignee:  'Chris Hall',
-    initial:   'C',
-    vehicle:   'Van-06',
-    status:    'Completed',
-  },
-  {
-    id:        'JB-1029',
-    client:    'Metro Station',
-    address:   'Central Line, Platform B',
-    schedule:  'Jun 14, 2025 · 07:00 AM',
-    assignee:  'Nina Webb',
-    initial:   'N',
-    vehicle:   'Truck-03',
-    status:    'Pending',
-  },
-  {
-    id:        'JB-1020',
-    client:    'East Industrial Park',
-    address:   '19 Factory Lane, East Side',
-    schedule:  'Jun 08, 2025 · 11:00 AM',
-    assignee:  'James Ford',
-    initial:   'J',
-    vehicle:   'Truck-04',
-    status:    'Overdue',
-  },
-]
+export const JOB_DETAIL_MOCK = {
+  id:          'JB-1024',
+  title:       'Quarterly HVAC Inspection & Leak Repair',
+  status:      'In Progress',
+  priority:    'High Priority',
+  description: 'Perform scheduled quarterly maintenance on main commercial cooling tower units. Includes full inspection of all pipe junctions, pressure testing, leak identification and repair, and system sign-off documentation. All safety protocols must be completed prior to any pressurised work.',
 
-export const RESULTS_PER_PAGE = 7
+  client: {
+    name:         'Apex Industries',
+    address:      '458 Industrial Ave, New York, NY 10018',
+    contactPerson:'Robert Chen',
+    siteAccess:   'Gate B - Code 4589',
+    phone:        '+1 (212) 555-0182',
+  },
+
+  schedule: {
+    date:        'Oct 24, 2023',
+    timeWindow:  '08:00 AM – 04:00 PM',
+    duration:    '8h 00m',
+    progressPct: 33,
+  },
+
+  assignee: {
+    name:  'Mike Ross',
+    role:  'Senior HVAC Tech',
+    initial: 'MR',
+  },
+
+  vehicle: {
+    label:  'Van-04 (Ford Transit)',
+    status: 'Active',
+  },
+
+  activity: [
+    { event: 'Technician En Route',       time: '07:45 AM', actor: 'Mike Ross', done: true  },
+    { event: 'Arrived at Site',           time: '08:10 AM', actor: 'Mike Ross', done: true  },
+    { event: 'Job Started',               time: '08:15 AM', actor: 'Mike Ross', done: true  },
+    { event: 'Safety Form Submitted',     time: '09:30 AM', actor: 'Mike Ross', done: true  },
+    { event: 'Leak Identified – Part Request', time: '10:15 AM', actor: 'Mike Ross', done: false },
+  ],
+
+  lineItems: [
+    { item: 'Quarterly Maintenance Service', qty: 1, unitPrice: 150.00, total: 150.00 },
+    { item: 'PVC Pipe Junction – 2"',        qty: 2, unitPrice:  25.50, total:  51.00 },
+    { item: 'Labor Hours (Estimated)',        qty: 4, unitPrice:  85.00, total: 340.00 },
+  ],
+  totalEstimated: 541.00,
+
+  checklist: [
+    { task: 'Site Safety Assessment',    done: true  },
+    { task: 'Lockout/Tagout Procedures', done: true  },
+    { task: 'Cooling Tower Inspection',  done: true  },
+    { task: 'Leak Identification',       done: true  },
+    { task: 'Pipe Repair / Welding',     done: false },
+    { task: 'System Pressure Test',      done: false },
+    { task: 'Final Sign-off',            done: false },
+  ],
+}
