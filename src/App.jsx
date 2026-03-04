@@ -1,35 +1,25 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import AdminLayout from '@/components/layout/AdminLayout'
+import { routes } from '@/routes/adminRoutes'
 
-function App() {
-  const [count, setCount] = useState(0)
-
+export default function App() {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <Routes>
+      {/* Root redirect */}
+      <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
+
+      {/* Admin nested routes */}
+      <Route path="/admin" element={<AdminLayout />}>
+        {routes.map(({ path, element: Element }) => (
+          <Route key={path} path={path} element={<Element />} />
+        ))}
+        {/* Fallback within /admin */}
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="*" element={<Navigate to="dashboard" replace />} />
+      </Route>
+
+      {/* Global 404 fallback */}
+      <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+    </Routes>
   )
 }
-
-export default App
