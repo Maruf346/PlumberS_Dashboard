@@ -16,6 +16,7 @@ import StatusBadge            from '@/components/shared/StatusBadge'
 import EditJobNotFound        from '@/components/editjob/EditJobNotFound'
 import EditJobExistingFiles   from '@/components/editjob/EditJobExistingFiles'
 import DeleteJobModal         from '@/components/editjob/DeleteJobModal'
+import MultiSelect            from '@/components/shared/MultiSelect'
 
 import { JOBS_FULL }          from '@/data/jobsFullMock'
 import {
@@ -193,7 +194,7 @@ export default function EditJobPage() {
       safetyReq:      jobExtra.safetyReq   ?? 'standard',
       insuredName:    jobExtra.insuredName  ?? clientToInsuredValue(jobRecord.client),
       insuredContact: jobExtra.insuredContact ?? 'robert-chen',
-      manager:        managerToValue(jobRecord.manager),
+      managers:       [managerToValue(jobRecord.manager)].filter(Boolean),
       staff:          staffToValue(jobRecord.staff),
       vehicle:        jobRecord.vehicle,
       status:         jobRecord.status,
@@ -213,7 +214,7 @@ export default function EditJobPage() {
     if (!form.address?.trim())    e.address     = 'Address is required'
     if (!form.description?.trim()) e.description = 'Job description is required'
     if (!form.safetyReq)          e.safetyReq   = 'Safety requirement is required'
-    if (!form.manager)            e.manager     = 'Please assign a manager'
+    if (form.managers.length === 0) e.managers    = 'Please assign at least one manager'
     if (!form.staff)              e.staff       = 'Please assign staff'
     if (!form.status)             e.status      = 'Status is required'
     if (!form.priority)           e.priority    = 'Priority is required'
@@ -412,16 +413,16 @@ export default function EditJobPage() {
               <section className="flex flex-col gap-4">
                 <FormSectionHeader icon={IconUsers} title="Assignment" />
 
-                <FormSelect
-                  label="Assign Manager"
-                  id="manager"
-                  value={form.manager}
-                  onChange={set('manager')}
+                <MultiSelect
+                  label="Assign Manager(s)"
+                  id="managers"
                   options={MANAGER_OPTIONS}
-                  placeholder="Select manager..."
+                  value={form.managers}
+                  onChange={set('managers')}
+                  placeholder="Select one or more managers..."
                   required
                   icon={IconUserCog}
-                  error={errors.manager}
+                  error={errors.managers}
                 />
 
                 <FormSelect

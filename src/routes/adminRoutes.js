@@ -11,7 +11,6 @@ import SafetyFormsPage     from '@/pages/safety/SafetyFormsPage'
 import EmployeesPage       from '@/pages/employees/EmployeesPage'
 import ReportsPage         from '@/pages/reports/ReportsPage'
 import SettingsPage        from '@/pages/settings/SettingsPage'
-import CreateJobPage       from '@/pages/createjob/CreateJobPage'
 import JobDetailsPage      from '@/pages/jobdetails/JobDetailsPage'
 import FilePhotosPage      from '@/pages/filephotos/FilePhotosPage'
 import NotesPage           from '@/pages/notes/NotesPage'
@@ -51,7 +50,6 @@ export const routes = [
   { path: 'employees',             element: EmployeesPage      },
   { path: 'reports',               element: ReportsPage        },
   { path: 'settings',              element: SettingsPage       },
-  { path: 'create-job',            element: CreateJobPage      },
   { path: 'create-manager',        element: CreateManagerPage  },
   { path: 'jobs/:jobId',           element: JobDetailsPage     },
   { path: 'jobs/:jobId/edit',      element: EditJobPage        },
@@ -77,6 +75,5 @@ export const pageTitles = {
   staff:            'Staff',
   reports:          'Reports',
   settings:         'Settings',
-  'create-job':     'Create Job',
   'create-manager': 'Create Manager',
 }
