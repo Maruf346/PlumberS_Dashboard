@@ -199,12 +199,12 @@ export default function StaffPage() {
 
           {/* ── Header ── */}
           <PageHeader title="Staff" subtitle="Manage your field operations team members">
-            <button
+            {/* <button
               onClick={openAdd}
               className="inline-flex items-center gap-2 h-[38px] px-4 rounded-[10px] bg-[#f54900] hover:bg-[#c73b00] text-white text-[14px] font-semibold transition-colors shadow-[0px_1px_3px_rgba(245,73,0,0.3)] whitespace-nowrap"
             >
               <IconPlus /> Add Staff
-            </button>
+            </button> */}
           </PageHeader>
 
           {/* ── Status tabs ── */}

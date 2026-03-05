@@ -2,6 +2,8 @@
 // Status pills matching the Figma Fleet design exactly.
 // Healthy  → circle-check icon, green pill
 // Others   → triangle-alert icon, orange or red pill
+// Also exports VehicleActiveBadge for the is_active field.
+// ─────────────────────────────────────────────────────────────────────────────
 
 function IconCheckCircle() {
   return (
@@ -22,6 +24,7 @@ function IconAlertTriangle() {
   )
 }
 
+// ── Health status badge (Figma-matched) ───────────────────────────────────────
 const VARIANTS = {
   healthy: {
     pill:  'bg-[#ecfdf5] text-[#007a55]',
@@ -52,6 +55,21 @@ export default function VehicleStatusBadge({ status }) {
     <span className={`inline-flex items-center gap-1.5 px-3 py-[5px] rounded-full text-[12px] font-medium leading-[16px] whitespace-nowrap ${v.pill}`}>
       <Icon />
       {v.label}
+    </span>
+  )
+}
+
+// ── Active / Inactive badge (is_active field) ─────────────────────────────────
+export function VehicleActiveBadge({ isActive }) {
+  return isActive ? (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-[4px] rounded-full text-[12px] font-medium leading-[16px] bg-[#ecfdf5] border border-[#d0fae5] text-[#007a55] whitespace-nowrap">
+      <span className="w-1.5 h-1.5 rounded-full bg-[#007a55] shrink-0" />
+      Active
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-[4px] rounded-full text-[12px] font-medium leading-[16px] bg-[#f8fafc] border border-[#e2e8f0] text-[#62748e] whitespace-nowrap">
+      <span className="w-1.5 h-1.5 rounded-full bg-[#90a1b9] shrink-0" />
+      Inactive
     </span>
   )
 }

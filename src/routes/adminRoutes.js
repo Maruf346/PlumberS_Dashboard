@@ -7,6 +7,7 @@ import DashboardPage       from '@/pages/dashboard/DashboardPage'
 import JobsPage            from '@/pages/jobs/JobsPage'
 import SchedulePage        from '@/pages/schedule/SchedulePage'
 import FleetPage           from '@/pages/fleet/FleetPage'
+import VehicleDetailsPage    from '@/pages/fleet/VehicleDetailsPage'
 import SafetyFormsPage     from '@/pages/safety/SafetyFormsPage'
 import EmployeesPage       from '@/pages/employees/EmployeesPage'
 import ReportsPage         from '@/pages/reports/ReportsPage'
@@ -49,6 +50,7 @@ export const routes = [
   { path: 'jobs',                  element: JobsPage           },
   { path: 'schedule',              element: SchedulePage       },
   { path: 'fleet',                 element: FleetPage          },
+  { path: 'fleet/:vehicleId',      element: VehicleDetailsPage },
   { path: 'safety-forms',          element: SafetyFormsPage    },
   { path: 'employees',             element: EmployeesPage      },
   { path: 'reports',               element: ReportsPage        },
@@ -74,6 +76,7 @@ export const pageTitles = {
   jobs:             'Jobs',
   schedule:         'Schedule',
   fleet:            'Fleet',
+  vehicleId:        'Vehicle Details',
   'safety-forms':   'Safety Forms',
   employees:        'Employees',
   managers:         'Managers',

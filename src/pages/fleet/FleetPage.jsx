@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useMemo, useCallback, useState, useRef, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 
 import VehicleStatusBadge    from '@/components/fleet/VehicleStatusBadge'
 import AddEditVehicleDrawer  from '@/pages/fleet/AddEditVehicleDrawer'
@@ -260,6 +260,7 @@ function nextServiceDisplay(current, next) {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function FleetPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
 
   const search   = searchParams.get('search') ?? ''
   const status   = searchParams.get('status') ?? ''
@@ -482,10 +483,8 @@ export default function FleetPage() {
                     return (
                       <tr
                         key={vehicle.id}
-                        className={[
-                          'border-b border-[#f8fafc] last:border-b-0 hover:bg-[#fafafa] transition-colors',
-                          idx % 2 === 0 ? '' : '',
-                        ].join(' ')}
+                        onClick={() => navigate(`/admin/fleet/${vehicle.id}`)}
+                        className="border-b border-[#f8fafc] last:border-b-0 hover:bg-[#f0f4ff] transition-colors cursor-pointer"
                       >
                         {/* Vehicle name */}
                         <td className="px-6 py-[18px]">
@@ -525,8 +524,8 @@ export default function FleetPage() {
                           )}
                         </td>
 
-                        {/* Action */}
-                        <td className="px-6 py-[18px]">
+                        {/* Action — stopPropagation so row click doesn't fire */}
+                        <td className="px-6 py-[18px]" onClick={e => e.stopPropagation()}>
                           <VehicleActionMenu
                             vehicle={vehicle}
                             onEdit={() => openEdit(vehicle)}
