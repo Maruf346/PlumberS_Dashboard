@@ -292,12 +292,12 @@ export default function ManagersPage() {
                       </td>
 
                       {/* Role */}
-                      <td className="px-4 py-[14px]">
+                      {/* <td className="px-4 py-[14px]">
                         <div className="flex items-center gap-1.5">
                           <IconBriefcase />
                           <span className="text-[#314158] text-[13px] whitespace-nowrap">{mgr.role}</span>
                         </div>
-                      </td>
+                      </td> */}
 
                       {/* Assigned jobs */}
                       <td className="px-4 py-[14px]">
