@@ -30,7 +30,7 @@ const FIELD_TYPES = [
 const TYPES_WITH_OPTIONS = ['select', 'multi_select']
 
 // ── Mock data — mirrors what the backend would return ─────────────────────────
-const MOCK_TEMPLATES = [
+export const MOCK_TEMPLATES = [
   {
     id:          'tpl-001',
     name:        'Daily Vehicle Check',
@@ -579,7 +579,7 @@ export default function SafetyFormsPage() {
         <div className="flex gap-5 flex-1 min-h-0 items-start">
 
           {/* ── LEFT: Template list ── */}
-          <div className="w-[394px] shrink-0 bg-white border border-[#e2e8f0] rounded-[14px] overflow-hidden shadow-[0px_1px_3px_rgba(0,0,0,0.07)]">
+          <div className="w-[300px] shrink-0 bg-white border border-[#e2e8f0] rounded-[14px] overflow-hidden shadow-[0px_1px_3px_rgba(0,0,0,0.07)]">
             {/* Panel header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#f1f5f9]">
               <h2 className="text-[#0f172b] font-bold text-[15px]">Inspection Templates</h2>
