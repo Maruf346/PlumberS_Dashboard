@@ -24,8 +24,8 @@ export const MAINTENANCE_STATUS_OPTIONS = [
   { value: 'cancelled',   label: 'Cancelled'   },
 ]
 
-export const FLEET_PAGE_SIZES        = [10, 15, 20]
-export const FLEET_DEFAULT_PAGE_SIZE = 10
+export const FLEET_PAGE_SIZES        = [5, 10, 15, 20]
+export const FLEET_DEFAULT_PAGE_SIZE = 5
 
 // ── Per-vehicle inspection + maintenance history (mock backend relations) ──────
 export const VEHICLE_INSPECTIONS = {

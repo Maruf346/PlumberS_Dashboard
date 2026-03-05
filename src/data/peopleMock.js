@@ -312,8 +312,8 @@ export const PEOPLE_STATUS_OPTIONS = [
   { value: 'Inactive', label: 'Inactive' },
 ]
 
-export const PEOPLE_PAGE_SIZES = [10, 15, 20]
-export const PEOPLE_DEFAULT_PAGE_SIZE = 10
+export const PEOPLE_PAGE_SIZES = [5, 10, 15, 20]
+export const PEOPLE_DEFAULT_PAGE_SIZE = 5
 
 
 // ─────────────────────────────────────────────────────────────────────────────

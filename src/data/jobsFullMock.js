@@ -306,5 +306,5 @@ export const JOBS_FULL = [
 ]
 
 export const MANAGERS   = [...new Set(JOBS_FULL.map(j => j.manager))].sort()
-export const PAGE_SIZES = [10, 15, 20]
-export const DEFAULT_PAGE_SIZE = 10
+export const PAGE_SIZES = [5, 10, 15, 20]
+export const DEFAULT_PAGE_SIZE = 5
