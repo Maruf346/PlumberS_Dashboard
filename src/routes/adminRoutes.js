@@ -20,6 +20,8 @@ import ManagersPage        from '@/pages/managers/ManagersPage'
 import ManagerProfilePage  from '@/pages/managers/ManagerProfilePage'
 import StaffPage           from '@/pages/staff/StaffPage'
 import StaffProfilePage    from '@/pages/staff/StaffProfilePage'
+import ClientsPage         from '@/pages/clients/ClientsPage'
+import ClientProfilePage   from '@/pages/clients/ClientProfilePage'
 
 /**
  * navItems — items that appear in the sidebar navigation.
@@ -31,9 +33,10 @@ export const navItems = [
   { path: 'schedule',     label: 'Schedule',     icon: 'schedule'     },
   { path: 'fleet',        label: 'Fleet',        icon: 'fleet'        },
   { path: 'safety-forms', label: 'Safety Forms', icon: 'safety'       },
-  { path: 'employees',    label: 'Employees',    icon: 'employees'    },
+  // { path: 'employees',    label: 'Employees',    icon: 'employees'    },  // hidden — uncomment to restore
   { path: 'managers',     label: 'Managers',     icon: 'managers'     },
-  { path: 'staff',        label: 'Staff',        icon: 'staff'        },
+  { path: 'staff',        label: 'Employees',        icon: 'staff'        },
+  { path: 'clients',      label: 'Clients',      icon: 'clients'      },
   { path: 'reports',      label: 'Reports',      icon: 'reports'      },
   { path: 'settings',     label: 'Settings',     icon: 'settings'     },
 ]
@@ -59,6 +62,8 @@ export const routes = [
   { path: 'managers/:managerId',   element: ManagerProfilePage },
   { path: 'staff',                 element: StaffPage          },
   { path: 'staff/:staffId',        element: StaffProfilePage   },
+  { path: 'clients',               element: ClientsPage        },
+  { path: 'clients/:clientId',     element: ClientProfilePage  },
 ]
 
 /**
@@ -73,6 +78,7 @@ export const pageTitles = {
   employees:        'Employees',
   managers:         'Managers',
   staff:            'Staff',
+  clients:          'Clients',
   reports:          'Reports',
   settings:         'Settings',
   'create-manager': 'Create Manager',

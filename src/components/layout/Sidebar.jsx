@@ -99,7 +99,7 @@ const NAV_GROUPS = [
   },
   {
     label: 'People',
-    items: ['employees', 'managers', 'staff'],
+    items: ['employees', 'managers', 'staff', 'clients'],
   },
   {
     label: 'System',

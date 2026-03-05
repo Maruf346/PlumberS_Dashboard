@@ -1,6 +1,6 @@
 // src/components/people/PeopleActionMenu.jsx
 // 3-dot context menu shared by Managers and Staff tables.
-// Props: personId, type ('manager'|'staff'), onEdit, onToggleStatus, onDelete
+// Props: personId, type ('manager'|'staff'|'client'), onEdit, onToggleStatus, onDelete
 
 import { useRef, useState, useEffect } from 'react'
 import { useNavigate }                  from 'react-router-dom'
@@ -21,7 +21,7 @@ function IconTrash()    { return <svg width="14" height="14" viewBox="0 0 14 14"
 
 export default function PeopleActionMenu({
   personId,
-  type = 'manager',      // 'manager' | 'staff'
+  type = 'manager',      // 'manager' | 'staff' | 'client'
   isActive = true,
   onEdit,
   onToggleStatus,
@@ -40,7 +40,7 @@ export default function PeopleActionMenu({
 
   const stop = (fn) => (e) => { e.stopPropagation(); setOpen(false); fn?.() }
 
-  const basePath = type === 'manager' ? '/admin/managers' : '/admin/staff'
+  const basePath = type === 'manager' ? '/admin/managers' : type === 'client' ? '/admin/clients' : '/admin/staff'
 
   return (
     <div ref={ref} className="relative" onClick={e => e.stopPropagation()}>

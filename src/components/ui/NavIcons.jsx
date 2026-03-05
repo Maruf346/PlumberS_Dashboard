@@ -158,6 +158,19 @@ export function IconChevronLeft({ className = '' }) {
   )
 }
 
+
+export function IconClients({ className = '' }) {
+  return (
+    <svg className={className} width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <rect x="2" y="5" width="16" height="12" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+      <circle cx="8" cy="10" r="2" stroke="currentColor" strokeWidth="1.3"/>
+      <path d="M5 17c0-1.657 1.343-3 3-3s3 1.343 3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+      <path d="M13 9h3M13 12h2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+      <path d="M6 5V3.5A1.5 1.5 0 017.5 2h5A1.5 1.5 0 0114 3.5V5" stroke="currentColor" strokeWidth="1.3"/>
+    </svg>
+  )
+}
+
 // ── NAV_ICONS map — icon key → component ─────────────────────────────────────
 export const NAV_ICONS = {
   dashboard:  IconDashboard,
@@ -168,6 +181,7 @@ export const NAV_ICONS = {
   employees:  IconEmployees,
   managers:   IconManagers,
   staff:      IconStaff,
+  clients:    IconClients,
   reports:    IconReports,
   settings:   IconSettings,
 }

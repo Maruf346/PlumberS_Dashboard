@@ -1,5 +1,5 @@
 // src/components/people/DeletePersonModal.jsx
-// Confirm-delete dialog for Manager or Staff — adapts label by `type` prop.
+// Confirm-delete dialog for Manager, Staff, or Client — adapts label by `type` prop.
 
 function IconAlertTriangle() {
   return (
@@ -12,7 +12,7 @@ function IconAlertTriangle() {
 }
 
 export default function DeletePersonModal({ person, type = 'manager', onConfirm, onCancel }) {
-  const label = type === 'manager' ? 'Manager' : 'Staff Member'
+  const label = type === 'manager' ? 'Manager' : type === 'client' ? 'Client' : 'Staff Member'
 
   return (
     <div
@@ -43,6 +43,8 @@ export default function DeletePersonModal({ person, type = 'manager', onConfirm,
           <p className="text-[#c10007] text-[13px] leading-[20px]">
             {type === 'manager'
               ? 'All associated staff assignments, job records and activity logs will be unlinked permanently.'
+              : type === 'client'
+              ? 'All job history, site access records and billing data linked to this client will be permanently removed.'
               : 'All job assignments and activity records for this staff member will be removed permanently.'}
           </p>
         </div>
