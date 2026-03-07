@@ -37,10 +37,15 @@ export function IconSchedule({ className = '' }) {
 export function IconFleet({ className = '' }) {
   return (
     <svg className={className} width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <path d="M2 8.5l2.5-4h9l2.5 4m0 0v5H4v-5m12 0H4M1 8.5h18"
-        stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <circle cx="6.5"  cy="14.5" r="1.5" fill="currentColor"/>
-      <circle cx="13.5" cy="14.5" r="1.5" fill="currentColor"/>
+      {/* Van body */}
+      <rect x="1" y="7" width="12" height="7" rx="1" stroke="currentColor" strokeWidth="1.4"/>
+      {/* Cabin roof */}
+      <path d="M4 7V5a1 1 0 011-1h5a1 1 0 01.85.48L13 7" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+      {/* Cargo box */}
+      <path d="M13 9h4a1 1 0 011 1v3a1 1 0 01-1 1h-4V9z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+      {/* Wheels */}
+      <circle cx="5"  cy="15.5" r="1.6" stroke="currentColor" strokeWidth="1.3"/>
+      <circle cx="15" cy="15.5" r="1.6" stroke="currentColor" strokeWidth="1.3"/>
     </svg>
   )
 }

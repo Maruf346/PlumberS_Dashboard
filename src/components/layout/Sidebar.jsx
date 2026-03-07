@@ -6,33 +6,34 @@
 //   Desktop (≥1280px) — full 256px, collapsible to 72px icon rail
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { navItems } from '@/routes/adminRoutes'
 import { NAV_ICONS, IconLogout, IconChevronLeft, IconClose } from '@/components/ui/NavIcons'
+import { clearAuth, authStore } from '@/store/authStore'
 
 // ── Logo ──────────────────────────────────────────────────────────────────────
 function LogoFull() {
   return (
-    <div className="flex items-center gap-3 min-w-0 overflow-hidden">
-      <div className="w-8 h-8 rounded-lg bg-[#f54900] flex items-center justify-center shrink-0">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <path d="M15.5 2.5a3.5 3.5 0 00-3.45 4.13L5.3 13.38a3.5 3.5 0 104.24 4.24l6.75-6.75A3.5 3.5 0 0015.5 2.5zM4.5 16.5a1 1 0 110-2 1 1 0 010 2z" fill="white"/>
-        </svg>
-      </div>
-      <span className="text-white font-bold text-[18px] leading-none tracking-tight whitespace-nowrap select-none">
-        Plumber<span className="text-[#f54900]">S</span>
-      </span>
+    <div className="flex items-center justify-center min-w-0 overflow-hidden w-full">
+      <img
+        src="/logo.png"
+        alt="Adelaide Plumbing & Gasfitting"
+        className="h-150 w-auto object-contain select-none"
+        draggable={false}
+      />
     </div>
   )
 }
 
 function LogoMark() {
   return (
-    <div className="w-8 h-8 rounded-lg bg-[#f54900] flex items-center justify-center shrink-0">
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-        <path d="M15.5 2.5a3.5 3.5 0 00-3.45 4.13L5.3 13.38a3.5 3.5 0 104.24 4.24l6.75-6.75A3.5 3.5 0 0015.5 2.5zM4.5 16.5a1 1 0 110-2 1 1 0 010 2z" fill="white"/>
-      </svg>
-    </div>
+    <img
+      src="/logo.png"
+      alt="AP&G"
+      className="h-8 w-8 object-contain select-none"
+      draggable={false}
+      style={{ filter: 'brightness(0) invert(1)' }}
+    />
   )
 }
 
@@ -111,8 +112,29 @@ const NAV_GROUPS = [
 export default function Sidebar({ isOpen, collapsed, isMobile, onClose, onToggleCollapse }) {
   const isIconOnly = collapsed && !isMobile
 
+  const navigate = useNavigate()
+
   // Build a path→navItem lookup
   const navMap = Object.fromEntries(navItems.map(item => [item.path, item]))
+
+  // ── Logout ────────────────────────────────────────────────────────────────
+  const handleLogout = async () => {
+    // ── API call — uncomment when backend ready ────────────────────────────
+    // try {
+    //   await fetch(`${import.meta.env.VITE_API_BASE_URL}user/logout/`, {
+    //     method:  'POST',
+    //     headers: {
+    //       'Content-Type':  'application/json',
+    //       'Authorization': `Bearer ${authStore.access}`,
+    //     },
+    //   })
+    // } catch (err) {
+    //   console.error('Logout API error:', err)
+    // }
+    // ── End API call ───────────────────────────────────────────────────────
+    clearAuth()
+    navigate('/login', { replace: true })
+  }
 
   return (
     <>
@@ -221,16 +243,14 @@ export default function Sidebar({ isOpen, collapsed, isMobile, onClose, onToggle
           ].join(' ')}
         >
           {isIconOnly ? (
-            /* Icon-only: avatar only */
-            <div
-              title="Admin User · admin@company.com"
-              className="w-10 h-10 rounded-full bg-[#1d293d] border border-[#314158] flex items-center justify-center cursor-pointer hover:bg-[#314158] transition-colors"
+            /* Icon-only: logout button */
+            <button
+              onClick={handleLogout}
+              title="Sign out"
+              className="w-10 h-10 rounded-full bg-[#1d293d] border border-[#314158] flex items-center justify-center cursor-pointer hover:bg-[#f54900]/20 hover:border-[#f54900]/40 transition-colors group"
             >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <circle cx="10" cy="7" r="3.5" stroke="#cad5e2" strokeWidth="1.3"/>
-                <path d="M3 18c0-3.5 3.134-6 7-6s7 2.5 7 6" stroke="#cad5e2" strokeWidth="1.3" strokeLinecap="round"/>
-              </svg>
-            </div>
+              <IconLogout className="w-4 h-4 text-[#62748e] group-hover:text-[#f54900] transition-colors" />
+            </button>
           ) : (
             /* Full: avatar + name/email + logout icon */
             <div className="flex items-center gap-3 px-2 py-2 rounded-[8px] hover:bg-[#1d293d] transition-colors cursor-pointer group">
@@ -250,7 +270,7 @@ export default function Sidebar({ isOpen, collapsed, isMobile, onClose, onToggle
               <button
                 title="Sign out"
                 className="text-[#62748e] hover:text-[#f54900] transition-colors p-1 rounded shrink-0 opacity-0 group-hover:opacity-100"
-                onClick={e => e.stopPropagation()}
+                onClick={e => { e.stopPropagation(); handleLogout() }}
               >
                 <IconLogout className="w-4 h-4" />
               </button>
