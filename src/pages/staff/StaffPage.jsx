@@ -198,7 +198,7 @@ export default function StaffPage() {
         <div className="flex-1 p-6 lg:p-8 flex flex-col gap-6 max-w-[1600px] min-w-0">
 
           {/* ── Header ── */}
-          <PageHeader title="Staff" subtitle="Manage your field operations team members">
+          <PageHeader title="Employees" subtitle="Manage your employees, their roles and access levels.">
             {/* <button
               onClick={openAdd}
               className="inline-flex items-center gap-2 h-[38px] px-4 rounded-[10px] bg-[#f54900] hover:bg-[#c73b00] text-white text-[14px] font-semibold transition-colors shadow-[0px_1px_3px_rgba(245,73,0,0.3)] whitespace-nowrap"
@@ -229,7 +229,7 @@ export default function StaffPage() {
             {/* Toolbar */}
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 px-6 py-4 border-b border-[#f1f5f9]">
               <div className="shrink-0">
-                <h2 className="text-[#1d293d] font-bold text-[16px] leading-[24px]">All Staff</h2>
+                <h2 className="text-[#1d293d] font-bold text-[16px] leading-[24px]">All Employees</h2>
                 <p className="text-[#90a1b9] text-[12px] leading-[16px] mt-0.5">
                   {filtered.length} member{filtered.length !== 1 ? 's' : ''} found
                 </p>
@@ -268,7 +268,7 @@ export default function StaffPage() {
                     <th className="px-5 py-[13px] w-10">
                       <input type="checkbox" className="w-[13px] h-[13px] rounded border-[#cad5e2] accent-[#f54900] cursor-pointer" readOnly/>
                     </th>
-                    {['Staff Member','Email','Role','Manager','Jobs','Status',''].map((col, i) => (
+                    {['Employee','Email','Role','Manager','Jobs','Status',''].map((col, i) => (
                       <th key={i}
                         className={`px-4 py-[13px] text-[13px] font-bold text-[#62748e] leading-[20px] whitespace-nowrap ${i === 6 ? 'text-right' : 'text-left'}`}>
                         {col}
