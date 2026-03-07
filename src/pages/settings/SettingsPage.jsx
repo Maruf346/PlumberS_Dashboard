@@ -58,9 +58,9 @@ export default function SettingsPage() {
   const renderContent = () => {
     switch (activeId) {
       case 'profile':  return <ProfileTab />
-      case 'terms':    return <RichContentTab title="Terms & Conditions" getEndpoint="supports/terms/"        patchEndpoint="supports/admin/terms/"    mockData={MOCK_TERMS}   />
-      case 'privacy':  return <RichContentTab title="Privacy Policy"     getEndpoint="supports/privacy/"      patchEndpoint="supports/admin/privacy/"  mockData={MOCK_PRIVACY} />
-      case 'about':    return <RichContentTab title="About Us"           getEndpoint="supports/about-us/"     patchEndpoint="supports/admin/about-us/" mockData={MOCK_ABOUT}   />
+      case 'terms':    return <RichContentTab key="terms"   title="Terms & Conditions" getEndpoint="supports/terms/"        patchEndpoint="supports/admin/terms/"    mockData={MOCK_TERMS}   />
+      case 'privacy':  return <RichContentTab key="privacy" title="Privacy Policy"     getEndpoint="supports/privacy/"      patchEndpoint="supports/admin/privacy/"  mockData={MOCK_PRIVACY} />
+      case 'about':    return <RichContentTab key="about"   title="About Us"           getEndpoint="supports/about-us/"     patchEndpoint="supports/admin/about-us/" mockData={MOCK_ABOUT}   />
       case 'faqs':     return <FaqTab />
       case 'feedback': return <FeedbackTab />
       case 'issues':   return <IssuesTab />
