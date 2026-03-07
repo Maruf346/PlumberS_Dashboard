@@ -150,8 +150,13 @@ export default function SchedulePage() {
 
   // ── Calendar state ─────────────────────────────────────────────────────────
   const today = new Date()
-  const [viewYear,  setViewYear]  = useState(2025)   // default Oct 2025 to match mock data
-  const [viewMonth, setViewMonth] = useState(9)       // 0-based; 9 = October
+  // ── Calendar initial view: current real month/year ─────────────────────────
+  // To hardcode Oct 2025 (matching mock data), comment the two `today` lines
+  // below and uncomment these instead:
+  // const [viewYear,  setViewYear]  = useState(2025)
+  // const [viewMonth, setViewMonth] = useState(9)       // 0-based; 9 = October
+  const [viewYear,  setViewYear]  = useState(today.getFullYear())
+  const [viewMonth, setViewMonth] = useState(today.getMonth())
   const [viewMode,  setViewMode]  = useState('month') // 'month' | 'week' | 'day'
 
   // ── Jobs state: each job carries optional scheduledDate { year, month, day } + scheduledTime ──
@@ -169,7 +174,8 @@ export default function SchedulePage() {
 
   // ── Drag state ─────────────────────────────────────────────────────────────
   const draggingJob = useRef(null)
-  const [dragOverDay, setDragOverDay] = useState(null)   // { year, month, day }
+  const [dragOverDay,   setDragOverDay]   = useState(null)   // { year, month, day }
+  const [dragOverPanel, setDragOverPanel] = useState(false)  // hovering unscheduled panel
 
   // ── Time-picker modal state ────────────────────────────────────────────────
   const [pendingDrop, setPendingDrop] = useState(null) // { job, date }
@@ -243,6 +249,44 @@ export default function SchedulePage() {
   }
   const handleDragEnd = () => { draggingJob.current = null; setDragOverDay(null) }
 
+  // ── Panel drag handlers (drop onto unscheduled panel = unschedule) ─────────
+  const handlePanelDragOver = (e) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverPanel(true)
+  }
+  const handlePanelDragLeave = () => setDragOverPanel(false)
+  const handlePanelDrop = (e) => {
+    e.preventDefault()
+    setDragOverPanel(false)
+    const job = draggingJob.current
+    draggingJob.current = null
+    if (!job || !job._isScheduled) return   // already unscheduled — no-op
+
+    // Optimistic update: clear schedule
+    setJobs(prev => prev.map(j =>
+      j.id === job.id
+        ? { ...j, scheduledDate: null, scheduledTime: '09:00', _isScheduled: false }
+        : j
+    ))
+
+    // ── API call — uncomment when backend ready ──────────────────────────
+    // const apiBase   = import.meta.env.VITE_API_BASE_URL
+    // const endpoint  = `${apiBase}jobs/${job.id}/schedule/`
+    //
+    // try {
+    //   await fetch(endpoint, {
+    //     method:  'PATCH',
+    //     headers: { 'Content-Type': 'application/json' },
+    //     body:    JSON.stringify({ scheduled_datetime: null }),
+    //   })
+    // } catch (err) {
+    //   console.error('Failed to unschedule job:', err)
+    //   // Optionally revert optimistic update here
+    // }
+    // ── End API call ─────────────────────────────────────────────────────
+  }
+
   // ── Confirm scheduling after time pick ────────────────────────────────────
   const confirmSchedule = (time) => {
     const { job, date } = pendingDrop
@@ -294,7 +338,17 @@ export default function SchedulePage() {
       <div className="flex gap-0 min-h-full">
 
         {/* ── LEFT: Unscheduled jobs panel ── */}
-        <div className="w-[220px] shrink-0 border-r border-[#e2e8f0] bg-white flex flex-col">
+        <div
+          className={[
+            'w-[220px] shrink-0 border-r flex flex-col transition-colors duration-100',
+            dragOverPanel
+              ? 'bg-[#fff4ee] border-[#f54900]/30'
+              : 'bg-white border-[#e2e8f0]',
+          ].join(' ')}
+          onDragOver={handlePanelDragOver}
+          onDragLeave={handlePanelDragLeave}
+          onDrop={handlePanelDrop}
+        >
           <div className="px-4 py-4 border-b border-[#f1f5f9]">
             <div className="flex items-center gap-2">
               <span className="text-[#62748e]"><IconBriefcase /></span>
@@ -303,11 +357,20 @@ export default function SchedulePage() {
                 {unscheduled.length}
               </span>
             </div>
-            <p className="text-[#90a1b9] text-[11px] mt-1 leading-[16px]">Drag a job onto the calendar to schedule it</p>
+            <p className="text-[#90a1b9] text-[11px] mt-1 leading-[16px]">
+              {dragOverPanel
+                ? 'Release to unschedule'
+                : 'Drag a job here to unschedule · Drag onto calendar to schedule'}
+            </p>
           </div>
 
           <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
-            {unscheduled.length === 0 ? (
+            {dragOverPanel && (
+              <div className="flex items-center justify-center h-12 rounded-[8px] border-2 border-dashed border-[#f54900]/50 text-[#f54900] text-[11px] font-semibold">
+                Drop to unschedule
+              </div>
+            )}
+            {unscheduled.length === 0 && !dragOverPanel ? (
               <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
                 <span className="text-[#e2e8f0]"><IconCalPlus /></span>
                 <p className="text-[#cad5e2] text-[12px]">All jobs scheduled</p>
