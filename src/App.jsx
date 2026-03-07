@@ -1,25 +1,42 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import AdminLayout from '@/components/layout/AdminLayout'
-import { routes } from '@/routes/adminRoutes'
+import { routes }  from '@/routes/adminRoutes'
+import LoginPage   from '@/pages/login/LoginPage'
+import { isLoggedIn } from '@/store/authStore'
+
+// ── Simple guard: if not logged in, redirect to /login ────────────────────────
+// In dev mode, isLoggedIn() returns true only after the login form is submitted.
+function RequireAuth({ children }) {
+  return isLoggedIn() ? children : <Navigate to="/login" replace />
+}
 
 export default function App() {
   return (
     <Routes>
-      {/* Root redirect */}
-      <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
+      {/* ── Login (public) ── */}
+      <Route path="/login" element={<LoginPage />} />
 
-      {/* Admin nested routes */}
-      <Route path="/admin" element={<AdminLayout />}>
+      {/* ── Root: redirect to login if not authed, else dashboard ── */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
+
+      {/* ── Admin nested routes (protected) ── */}
+      <Route
+        path="/admin"
+        element={
+          <RequireAuth>
+            <AdminLayout />
+          </RequireAuth>
+        }
+      >
         {routes.map(({ path, element: Element }) => (
           <Route key={path} path={path} element={<Element />} />
         ))}
-        {/* Fallback within /admin */}
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="*" element={<Navigate to="dashboard" replace />} />
       </Route>
 
-      {/* Global 404 fallback */}
-      <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+      {/* ── Global fallback ── */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   )
 }
