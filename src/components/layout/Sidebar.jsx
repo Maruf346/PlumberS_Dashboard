@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { NavLink, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { navItems } from '@/routes/adminRoutes'
 import { NAV_ICONS, IconLogout, IconChevronLeft, IconClose } from '@/components/ui/NavIcons'
 import { clearAuth, authStore } from '@/store/authStore'
@@ -18,7 +19,7 @@ function LogoFull() {
       <img
         src="/logo.png"
         alt="Adelaide Plumbing & Gasfitting"
-        className="h-10 w-auto object-contain select-none"
+        className="h-150 w-auto object-contain select-none"
         draggable={false}
       />
     </div>
@@ -113,6 +114,25 @@ export default function Sidebar({ isOpen, collapsed, isMobile, onClose, onToggle
   const isIconOnly = collapsed && !isMobile
 
   const navigate = useNavigate()
+
+  // ── User state — seeded from authStore/sessionStorage so React re-renders ──
+  // authStore is a plain object, not React state, so we mirror the user into
+  // local state. We read from sessionStorage as the authoritative source since
+  // authStore may not be hydrated yet on first render after a page refresh.
+  const getUser = () => {
+    if (authStore.user) return authStore.user
+    try {
+      const raw = sessionStorage.getItem('user')
+      return raw ? JSON.parse(raw) : null
+    } catch { return null }
+  }
+  const [user, setUser] = useState(getUser)
+
+  // Re-read on every render in case authStore was updated after login
+  useEffect(() => {
+    const u = getUser()
+    if (u) setUser(u)
+  })
 
   // Build a path→navItem lookup
   const navMap = Object.fromEntries(navItems.map(item => [item.path, item]))
@@ -256,17 +276,23 @@ export default function Sidebar({ isOpen, collapsed, isMobile, onClose, onToggle
           ) : (
             /* Full: avatar + name/email + logout icon */
             <div className="flex items-center gap-3 px-2 py-2 rounded-[8px] hover:bg-[#1d293d] transition-colors cursor-pointer group">
-              {/* Avatar */}
-              <div className="w-10 h-10 rounded-full bg-[#314158] border border-[#45556c] flex items-center justify-center shrink-0">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <circle cx="10" cy="7" r="3.5" stroke="#cad5e2" strokeWidth="1.3"/>
-                  <path d="M3 18c0-3.5 3.134-6 7-6s7 2.5 7 6" stroke="#cad5e2" strokeWidth="1.3" strokeLinecap="round"/>
-                </svg>
+              {/* Avatar — shows profile picture if set, else initials */}
+              <div className="w-10 h-10 rounded-full bg-[#314158] border border-[#45556c] flex items-center justify-center shrink-0 overflow-hidden">
+                {user?.profile_picture
+                  ? <img src={user.profile_picture} alt="avatar" className="w-full h-full object-cover" />
+                  : <span className="text-[#cad5e2] text-[13px] font-bold select-none">
+                      {user?.full_name?.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase() ?? 'AU'}
+                    </span>
+                }
               </div>
-              {/* Name + email */}
+              {/* Name + email — read from authStore (hydrated from sessionStorage) */}
               <div className="flex-1 min-w-0">
-                <p className="text-white text-[14px] font-medium leading-5 truncate">Admin User</p>
-                <p className="text-[#62748e] text-[12px] leading-4 truncate">admin@company.com</p>
+                <p className="text-white text-[14px] font-medium leading-5 truncate">
+                  {user?.full_name ?? 'Admin'}
+                </p>
+                <p className="text-[#62748e] text-[12px] leading-4 truncate">
+                  {user?.email ?? ''}
+                </p>
               </div>
               {/* Logout — appears on hover */}
               <button

@@ -2,13 +2,14 @@
 // Settings hub — left nav + right content panel
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState }     from 'react'
+import { useState, useEffect } from 'react'
+import { apiFetch }       from '@/utils/apiFetch'
 import ProfileTab       from './tabs/ProfileTab'
 import RichContentTab   from './tabs/RichContentTab'
 import FeedbackTab      from './tabs/FeedbackTab'
 import IssuesTab        from './tabs/IssuesTab'
 import FaqTab           from './tabs/FaqTab'
-import { MOCK_TERMS, MOCK_PRIVACY, MOCK_ABOUT } from './settingsMock'
+// settingsMock.js no longer needed — all data fetched from real API
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 function IconUser()      { return <svg width="17" height="17" viewBox="0 0 17 17" fill="none"><circle cx="8.5" cy="6" r="3" stroke="currentColor" strokeWidth="1.3"/><path d="M2.5 15c0-3.5 2.7-6 6-6s6 2.5 6 6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg> }
@@ -48,19 +49,34 @@ const NAV = [
 
 const ALL_ITEMS = NAV.flatMap(g => g.items)
 
-// ── Badge counts (replace with real data when API ready) ─────────────────────
-const BADGE = { feedback: 4, issues: 3 }
+// Badge counts are fetched from the API on mount (see useEffect in SettingsPage)
 
 export default function SettingsPage() {
-  const [activeId, setActiveId] = useState('profile')
+  const [activeId,  setActiveId]  = useState('profile')
+  const [badges,    setBadges]    = useState({ feedback: null, issues: null })
   const active = ALL_ITEMS.find(i => i.id === activeId)
+
+  // ── Fetch badge counts on mount ─────────────────────────────────────────
+  useEffect(() => {
+    const fetchCounts = async () => {
+      const [fb, is] = await Promise.all([
+        apiFetch('supports/feedback/?page=1'),
+        apiFetch('supports/issues/?page=1'),
+      ])
+      setBadges({
+        feedback: fb.ok  ? (fb.data?.count  ?? null) : null,
+        issues:   is.ok  ? (is.data?.count  ?? null) : null,
+      })
+    }
+    fetchCounts()
+  }, [])
 
   const renderContent = () => {
     switch (activeId) {
       case 'profile':  return <ProfileTab />
-      case 'terms':    return <RichContentTab key="terms"   title="Terms & Conditions" getEndpoint="supports/terms/"        patchEndpoint="supports/admin/terms/"    mockData={MOCK_TERMS}   />
-      case 'privacy':  return <RichContentTab key="privacy" title="Privacy Policy"     getEndpoint="supports/privacy/"      patchEndpoint="supports/admin/privacy/"  mockData={MOCK_PRIVACY} />
-      case 'about':    return <RichContentTab key="about"   title="About Us"           getEndpoint="supports/about-us/"     patchEndpoint="supports/admin/about-us/" mockData={MOCK_ABOUT}   />
+      case 'terms':    return <RichContentTab key="terms"   title="Terms & Conditions" getEndpoint="supports/terms/"        patchEndpoint="supports/admin/terms/"    />
+      case 'privacy':  return <RichContentTab key="privacy" title="Privacy Policy"     getEndpoint="supports/privacy/"      patchEndpoint="supports/admin/privacy/"  />
+      case 'about':    return <RichContentTab key="about"   title="About Us"           getEndpoint="supports/about-us/"     patchEndpoint="supports/admin/about-us/" />
       case 'faqs':     return <FaqTab />
       case 'feedback': return <FeedbackTab />
       case 'issues':   return <IssuesTab />
@@ -87,7 +103,7 @@ export default function SettingsPage() {
               {group.items.map(item => {
                 const Icon    = item.icon
                 const isActive = item.id === activeId
-                const badge   = BADGE[item.id]
+                const badge   = badges[item.id]
                 return (
                   <button key={item.id} onClick={() => setActiveId(item.id)}
                     className={[
