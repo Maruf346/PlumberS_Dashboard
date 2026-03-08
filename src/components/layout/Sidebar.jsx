@@ -18,7 +18,7 @@ function LogoFull() {
       <img
         src="/logo.png"
         alt="Adelaide Plumbing & Gasfitting"
-        className="h-150 w-auto object-contain select-none"
+        className="h-10 w-auto object-contain select-none"
         draggable={false}
       />
     </div>
@@ -119,19 +119,21 @@ export default function Sidebar({ isOpen, collapsed, isMobile, onClose, onToggle
 
   // ── Logout ────────────────────────────────────────────────────────────────
   const handleLogout = async () => {
-    // ── API call — uncomment when backend ready ────────────────────────────
-    // try {
-    //   await fetch(`${import.meta.env.VITE_API_BASE_URL}user/logout/`, {
-    //     method:  'POST',
-    //     headers: {
-    //       'Content-Type':  'application/json',
-    //       'Authorization': `Bearer ${authStore.access}`,
-    //     },
-    //   })
-    // } catch (err) {
-    //   console.error('Logout API error:', err)
-    // }
-    // ── End API call ───────────────────────────────────────────────────────
+    // ── Logout API ─────────────────────────────────────────────────────────
+    try {
+      await fetch(`${import.meta.env.VITE_API_BASE_URL}user/logout/`, {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${authStore.access}`,
+        },
+      })
+    } catch (err) {
+      // If the API call fails (e.g. token already expired), we still
+      // clear local state and redirect — the user is logged out client-side.
+      console.error('Logout API error:', err)
+    }
+    // ── End logout API ─────────────────────────────────────────────────────
     clearAuth()
     navigate('/login', { replace: true })
   }

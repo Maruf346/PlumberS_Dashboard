@@ -25,11 +25,10 @@ export function setAuth({ user, tokens }) {
   authStore.refresh         = tokens?.refresh ?? null
   authStore.isAuthenticated = true
 
-  // ── Persist to sessionStorage — uncomment when backend ready ──────────────
-  // sessionStorage.setItem('access',  tokens.access)
-  // sessionStorage.setItem('refresh', tokens.refresh)
-  // sessionStorage.setItem('user',    JSON.stringify(user))
-  // ── End persist ───────────────────────────────────────────────────────────
+  // Persist tokens + user to sessionStorage (cleared on tab/browser close)
+  sessionStorage.setItem('access',  tokens.access)
+  sessionStorage.setItem('refresh', tokens.refresh)
+  sessionStorage.setItem('user',    JSON.stringify(user))
 }
 
 export function clearAuth() {
@@ -38,11 +37,28 @@ export function clearAuth() {
   authStore.refresh         = null
   authStore.isAuthenticated = false
 
-  // sessionStorage.clear()
+  sessionStorage.clear()
 }
 
-// ── Dev-mode helper: check if user has a valid session ────────────────────────
-// In prod this would read from sessionStorage / validate the access token.
+// ── Check if user has a valid session ─────────────────────────────────────────
+// Reads from sessionStorage so the session survives a page refresh.
+// On first load, hydrates the in-memory authStore from sessionStorage.
 export function isLoggedIn() {
-  return authStore.isAuthenticated
+  if (authStore.isAuthenticated) return true
+
+  // Hydrate from sessionStorage on page refresh
+  const access = sessionStorage.getItem('access')
+  const user   = sessionStorage.getItem('user')
+  if (access && user) {
+    try {
+      authStore.user            = JSON.parse(user)
+      authStore.access          = access
+      authStore.refresh         = sessionStorage.getItem('refresh')
+      authStore.isAuthenticated = true
+      return true
+    } catch (_) {
+      sessionStorage.clear()
+    }
+  }
+  return false
 }

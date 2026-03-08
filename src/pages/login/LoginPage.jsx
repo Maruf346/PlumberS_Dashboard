@@ -103,57 +103,35 @@ export default function LoginPage() {
 
     setLoading(true)
 
-    // ── DEV MODE: bypass API, accept any non-empty credentials ────────────────
-    // Remove this block and uncomment the API block below when going live.
-    await new Promise(r => setTimeout(r, 600)) // simulate network delay
-    setAuth({
-      user: {
-        id:              'dev-user-001',
-        full_name:       'Admin User',
-        email:           email.trim(),
-        phone:           '',
-        profile_picture: null,
-        role:            'admin',
-      },
-      tokens: {
-        access:  'dev-access-token',
-        refresh: 'dev-refresh-token',
-      },
-    })
-    setLoading(false)
-    navigate('/admin/dashboard', { replace: true })
-    return
-    // ── End DEV MODE ──────────────────────────────────────────────────────────
+    // ── Login API ─────────────────────────────────────────────────────────────
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE_URL
+      const res = await fetch(`${apiBase}users/admin/login/`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email: email.trim(), password }),
+      })
 
-    // ── PRODUCTION API block — uncomment when backend ready ───────────────────
-    //
-    // try {
-    //   const apiBase = import.meta.env.VITE_API_BASE_URL
-    //   const res = await fetch(`${apiBase}users/admin/login/`, {
-    //     method:  'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body:    JSON.stringify({ email: email.trim(), password }),
-    //   })
-    //
-    //   const data = await res.json()
-    //
-    //   if (!res.ok) {
-    //     setError(data?.detail ?? 'Login failed. Please try again.')
-    //     setLoading(false)
-    //     return
-    //   }
-    //
-    //   // Store auth state (tokens + user)
-    //   setAuth({ user: data.user, tokens: data.tokens })
-    //
-    //   setLoading(false)
-    //   navigate('/admin/dashboard', { replace: true })
-    // } catch (err) {
-    //   setError('Unable to reach the server. Please check your connection.')
-    //   setLoading(false)
-    // }
-    //
-    // ── End PRODUCTION block ─────────────────────────────────────────────────
+      const data = await res.json()
+
+      if (!res.ok) {
+        // Backend returns { detail: "Invalid email or password." }
+        // or { detail: "You do not have permission to access the dashboard." }
+        setError(data?.detail ?? 'Login failed. Please try again.')
+        setLoading(false)
+        return
+      }
+
+      // Store user + tokens (persisted to sessionStorage in authStore)
+      setAuth({ user: data.user, tokens: data.tokens })
+
+      setLoading(false)
+      navigate('/admin/dashboard', { replace: true })
+    } catch (err) {
+      setError('Unable to reach the server. Please check your connection.')
+      setLoading(false)
+    }
+    // ── End login API ─────────────────────────────────────────────────────────
   }
 
   return (
