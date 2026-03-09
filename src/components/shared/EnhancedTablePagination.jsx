@@ -37,11 +37,13 @@ function getPageNumbers(current, total) {
 }
 
 export default function EnhancedTablePagination({
-  currentPage,
+  page,
+  currentPage = page,          // accept either prop name
   totalPages,
-  totalResults,
+  totalCount,
+  totalResults = totalCount,   // accept either prop name
   pageSize,
-  pageSizeOptions = [10, 15, 20],
+  pageSizeOptions = [5, 10, 15, 20],
   onPageChange,
   onPageSizeChange,
 }) {

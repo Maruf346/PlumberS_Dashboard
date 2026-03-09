@@ -2,7 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import AdminLayout from '@/components/layout/AdminLayout'
 import { routes }  from '@/routes/adminRoutes'
 import LoginPage   from '@/pages/login/LoginPage'
-import { isLoggedIn } from '@/store/authStore'
+import { isLoggedIn }  from '@/store/authStore'
+import NotFoundPage    from '@/pages/errors/NotFoundPage'
 
 // ── Simple guard: if not logged in, redirect to /login ────────────────────────
 // In dev mode, isLoggedIn() returns true only after the login form is submitted.
@@ -32,7 +33,7 @@ export default function App() {
           <Route key={path} path={path} element={<Element />} />
         ))}
         <Route index element={<Navigate to="dashboard" replace />} />
-        <Route path="*" element={<Navigate to="dashboard" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
 
       {/* ── Global fallback ── */}
