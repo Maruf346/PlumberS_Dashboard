@@ -13,7 +13,8 @@
 //   onSaved  — optional callback after successful save
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { apiFetch } from '@/utils/apiFetch'
 
 import FormInput         from '@/components/shared/FormInput'
 import FormTextarea      from '@/components/shared/FormTextarea'
@@ -24,7 +25,6 @@ import PdfUploadZone     from '@/components/shared/PdfUploadZone'
 
 import { CLIENTS, MANAGERS, STAFF } from '@/data/peopleMock'
 import { VEHICLES }                  from '@/data/fleetMock'
-import { MOCK_TEMPLATES }            from '@/pages/safety/SafetyFormsPage'
 
 // ── Report template mocks (replace with API when ready) ──────────────────────
 const REPORT_TEMPLATES = [
@@ -50,7 +50,7 @@ const STAFF_OPTIONS   = STAFF.map(s => ({ value: s.id, label: s.name }))
 const VEHICLE_OPTIONS = VEHICLES
   .filter(v => v.is_active)
   .map(v => ({ value: v.id, label: `${v.name} · ${v.plate}` }))
-const SAFETY_FORM_OPTIONS  = MOCK_TEMPLATES.map(t => ({ value: t.id, label: t.name }))
+// SAFETY_FORM_OPTIONS fetched from API on mount (see safetyFormOptions state below)
 const REPORT_TEMPLATE_OPTIONS = REPORT_TEMPLATES.map(r => ({ value: r.id, label: r.name }))
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -217,6 +217,18 @@ export default function CreateJobPage({ onClose, onSaved }) {
   })
   const set    = field => value => setForm(prev => ({ ...prev, [field]: value }))
   const [errors, setErrors] = useState({})
+
+  // Safety form options — fetched from API (replaces removed MOCK_TEMPLATES)
+  const [safetyFormOptions, setSafetyFormOptions] = useState([])
+  useEffect(() => {
+    ;(async () => {
+      const { data, ok } = await apiFetch('safety-forms/?all=true')
+      if (ok && data) {
+        const list = Array.isArray(data) ? data : (data.results ?? [])
+        setSafetyFormOptions(list.map(t => ({ value: t.id, label: t.name })))
+      }
+    })()
+  }, [])
 
   // Derive the selected client object for auto-fill
   const selectedClient = CLIENTS.find(c => c.id === form.client_id) ?? null
@@ -394,7 +406,7 @@ export default function CreateJobPage({ onClose, onSaved }) {
             <MultiSelect
               label="Safety Requirement Form"
               id="safety_form_ids"
-              options={SAFETY_FORM_OPTIONS}
+              options={safetyFormOptions}
               value={form.safety_form_ids}
               onChange={set('safety_form_ids')}
               placeholder="Select safety form template(s)…"
