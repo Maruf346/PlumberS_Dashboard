@@ -317,6 +317,8 @@ export default function ClientsPage() {
                 {/* Actions */}
                 <div onClick={e => e.stopPropagation()}>
                   <PeopleActionMenu
+                    personId={client.id}
+                    type="client"
                     onEdit={() => openEdit(client)}
                     onToggleStatus={() => handleToggleStatus(client)}
                     onDelete={() => setDeleteTarget(client)}

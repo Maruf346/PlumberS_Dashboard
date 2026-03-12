@@ -351,7 +351,7 @@ export default function ClientProfilePage() {
                       <IconBriefcase />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[#0f172b] font-semibold text-[14px] truncate">{job.title ?? job.name ?? `Job #${job.id}`}</p>
+                      <p className="text-[#0f172b] font-semibold text-[14px] truncate">{job.title ?? job.name ?? `Job #${job.job_id}`}</p>
                       {job.scheduled_date && (
                         <p className="text-[#90a1b9] text-[12px] mt-0.5">
                           {new Date(job.scheduled_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
