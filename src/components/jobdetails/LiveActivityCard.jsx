@@ -1,15 +1,15 @@
 // src/components/jobdetails/LiveActivityCard.jsx
-// Shows last 5 activities from job detail, "View Full Log" modal loads all
-// Full log: GET /api/jobs/{id}/activity/
+// Preview card: shows the 3 most recent activities (newest-first = ongoing path feel).
+// Full log modal: fetches ALL pages from the API, displays newest-first.
+// GET /api/jobs/{id}/activity/   (paginated — we loop all pages)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState } from 'react'
-import { apiFetch } from '@/utils/apiFetch'
+import { useState, useEffect } from 'react'
+import { apiFetch }            from '@/utils/apiFetch'
 
 function IconClock() { return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#62748e" strokeWidth="1.2"/><path d="M8 4.5V8l2.5 2" stroke="#62748e" strokeWidth="1.2" strokeLinecap="round"/></svg> }
 function IconClose() { return <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="#314158" strokeWidth="1.5" strokeLinecap="round"/></svg> }
 
-// Activity type → dot color
 const ACTIVITY_COLORS = {
   job_created:    'bg-[#1447e6]',
   job_assigned:   'bg-[#f54900]',
@@ -46,34 +46,68 @@ function ActivityItem({ item, isLast }) {
   )
 }
 
-// ── Full Log Modal ────────────────────────────────────────────────────────────
-function FullLogModal({ jobId, initialItems, onClose }) {
-  const [items,   setItems]   = useState(initialItems)
-  const [loading, setLoading] = useState(false)
-  const [loaded,  setLoaded]  = useState(false)
+// ── Fetch ALL pages from a paginated endpoint ─────────────────────────────────
+// Loops through `next` links until exhausted, collects all results.
+async function fetchAllPages(firstEndpoint) {
+  let allItems = []
+  let endpoint = firstEndpoint
 
-  // Load all activities from API on first open
-  useState(() => {
+  while (endpoint) {
+    // apiFetch prepends BASE, but 'next' from API is a full URL — handle both
+    let result
+    if (endpoint.startsWith('http')) {
+      // Full URL from `next` field — fetch directly
+      const token = sessionStorage.getItem('access')
+      const res = await fetch(endpoint, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      })
+      const data = res.ok ? await res.json() : null
+      result = { data, ok: res.ok }
+    } else {
+      result = await apiFetch(endpoint)
+    }
+
+    if (!result.ok || !result.data) break
+    allItems = allItems.concat(result.data.results ?? [])
+    // Move to next page, or stop
+    endpoint = result.data.next ?? null
+  }
+
+  return allItems
+}
+
+// ── Full Log Modal ────────────────────────────────────────────────────────────
+function FullLogModal({ jobId, onClose }) {
+  const [items,   setItems]   = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
     setLoading(true)
-    apiFetch(`jobs/${jobId}/activity/`).then(({ data, ok }) => {
-      if (ok && data) setItems(data.results ?? data ?? initialItems)
+    // Fetch all pages, then reverse so newest is at the top
+    fetchAllPages(`jobs/${jobId}/activity/`).then(all => {
+      setItems([...all].reverse())
       setLoading(false)
-      setLoaded(true)
     })
-  })
+  }, [jobId])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0f172b]/50 backdrop-blur-sm" onClick={onClose}>
       <div className="w-full max-w-[480px] bg-white rounded-[16px] shadow-[0px_20px_60px_rgba(15,23,43,0.25)] overflow-hidden max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
 
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#e2e8f0] shrink-0">
-          <h3 className="text-[#0f172b] font-bold text-[17px]">Full Activity Log</h3>
+          <div>
+            <h3 className="text-[#0f172b] font-bold text-[17px]">Full Activity Log</h3>
+            {!loading && <p className="text-[#90a1b9] text-[12px] mt-0.5">{items.length} event{items.length !== 1 ? 's' : ''} · newest first</p>}
+          </div>
           <button onClick={onClose} className="flex items-center justify-center w-8 h-8 rounded-[8px] border border-[#e2e8f0] hover:bg-[#f8fafc]"><IconClose /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
           {loading ? (
-            <div className="flex justify-center py-8"><div className="w-6 h-6 rounded-full border-2 border-[#e2e8f0] border-t-[#f54900] animate-spin"/></div>
+            <div className="flex flex-col items-center justify-center py-8 gap-3">
+              <div className="w-6 h-6 rounded-full border-2 border-[#e2e8f0] border-t-[#f54900] animate-spin"/>
+              <p className="text-[#90a1b9] text-[12px]">Loading all activity…</p>
+            </div>
           ) : items.length === 0 ? (
             <p className="text-center text-[#90a1b9] py-6">No activity recorded.</p>
           ) : (
@@ -92,13 +126,24 @@ function FullLogModal({ jobId, initialItems, onClose }) {
 
 // ── LiveActivityCard ──────────────────────────────────────────────────────────
 export default function LiveActivityCard({ jobId, activities }) {
-  const [showModal, setShowModal] = useState(false)
-  const preview = (activities ?? []).slice(0, 3)
+  const [showModal,  setShowModal]  = useState(false)
+  const [totalCount, setTotalCount] = useState(null)
+
+  // Fetch total count for button label (page_size=1 = tiny request, only need .count)
+  useEffect(() => {
+    apiFetch(`jobs/${jobId}/activity/?page_size=1`).then(({ data, ok }) => {
+      if (ok && data?.count != null) setTotalCount(data.count)
+    })
+  }, [jobId])
+
+  // Preview: last 3 activities (most recent), displayed newest-first.
+  // activities[] from job detail is oldest-first, so we take the tail and reverse.
+  const preview = [...(activities ?? [])].slice(-3).reverse()
 
   return (
     <>
       {showModal && (
-        <FullLogModal jobId={jobId} initialItems={activities ?? []} onClose={() => setShowModal(false)} />
+        <FullLogModal jobId={jobId} onClose={() => setShowModal(false)} />
       )}
 
       <div className="bg-white border border-[#e2e8f0] rounded-[14px] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_0px_rgba(0,0,0,0.1)] overflow-hidden h-full flex flex-col">
@@ -115,7 +160,7 @@ export default function LiveActivityCard({ jobId, activities }) {
           </span>
         </div>
 
-        {/* Timeline (preview) */}
+        {/* Preview — 3 most recent, newest on top */}
         <div className="flex-1 px-5 py-5 overflow-y-auto">
           {preview.length === 0 ? (
             <p className="text-[#90a1b9] text-[14px] text-center py-4">No activity yet.</p>
@@ -133,7 +178,7 @@ export default function LiveActivityCard({ jobId, activities }) {
         <div className="border-t border-[#f1f5f9] px-4 py-4">
           <button onClick={() => setShowModal(true)}
             className="w-full text-[#314158] text-[14px] font-medium leading-[20px] py-[9px] rounded-[10px] bg-[#f8fafc] hover:bg-[#f1f5f9] transition-colors">
-            View Full Log {activities?.length > 3 ? `(${activities.length})` : ''}
+            View Full Log {totalCount != null && totalCount > 3 ? `(${totalCount})` : ''}
           </button>
         </div>
       </div>

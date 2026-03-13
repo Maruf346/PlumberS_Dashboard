@@ -331,7 +331,7 @@ export default function ManagersPage() {
                       <td className="px-4 py-[14px]">
                         <div className="flex items-center gap-1.5">
                           <IconClipboard />
-                          <span className="text-[13px] font-semibold text-[#314158]">{mgr.job_count ?? 0}</span>
+                          <span className="text-[13px] font-semibold text-[#314158]">{mgr.jobs_count ?? 0}</span>
                           <span className="text-[12px] text-[#90a1b9]">jobs</span>
                         </div>
                       </td>
