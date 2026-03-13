@@ -10,18 +10,11 @@ function IconAlertTriangle() {
   )
 }
 
-export default function DeleteJobModal({ jobId, onConfirm, onCancel }) {
+export default function DeleteJobModal({ jobId, loading, onConfirm, onCancel }) {
   return (
-    /* Backdrop */
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0f172b]/40 backdrop-blur-sm"
-      onClick={onCancel}
-    >
-      {/* Dialog */}
-      <div
-        className="w-full max-w-[400px] bg-white rounded-[16px] shadow-[0px_20px_60px_rgba(15,23,43,0.25)] overflow-hidden"
-        onClick={e => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0f172b]/40 backdrop-blur-sm" onClick={onCancel}>
+      <div className="w-full max-w-[400px] bg-white rounded-[16px] shadow-[0px_20px_60px_rgba(15,23,43,0.25)] overflow-hidden" onClick={e => e.stopPropagation()}>
+
         {/* Header */}
         <div className="flex items-start gap-4 px-6 pt-6 pb-4">
           <div className="w-11 h-11 rounded-full bg-[#fef2f2] border border-[#ffe2e2] flex items-center justify-center shrink-0">
@@ -40,23 +33,19 @@ export default function DeleteJobModal({ jobId, onConfirm, onCancel }) {
         {/* Warning box */}
         <div className="mx-6 mb-5 bg-[#fef2f2] border border-[#ffe2e2] rounded-[8px] px-4 py-3">
           <p className="text-[#c10007] text-[13px] leading-[20px]">
-            All associated files, notes, activity logs and safety records will be permanently removed.
+            All associated files, safety records, reports, line items and activity logs will be permanently deleted.
           </p>
         </div>
 
         {/* Actions */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#f1f5f9]">
-          <button
-            onClick={onCancel}
-            className="px-4 py-[9px] bg-white border border-[#e2e8f0] text-[#314158] text-[14px] font-semibold rounded-[10px] hover:bg-[#f8fafc] transition-colors"
-          >
+          <button onClick={onCancel} disabled={loading}
+            className="px-4 py-[9px] bg-white border border-[#e2e8f0] text-[#314158] text-[14px] font-semibold rounded-[10px] hover:bg-[#f8fafc] disabled:opacity-40 transition-colors">
             Cancel
           </button>
-          <button
-            onClick={onConfirm}
-            className="px-4 py-[9px] bg-[#c10007] hover:bg-[#a30006] text-white text-[14px] font-semibold rounded-[10px] transition-colors shadow-[0px_1px_3px_rgba(193,0,7,0.3)]"
-          >
-            Delete Job
+          <button onClick={onConfirm} disabled={loading}
+            className="flex items-center gap-2 px-4 py-[9px] bg-[#c10007] hover:bg-[#a30006] text-white text-[14px] font-semibold rounded-[10px] disabled:opacity-60 transition-colors shadow-[0px_1px_3px_rgba(193,0,7,0.3)]">
+            {loading ? <><div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin"/>Deleting…</> : 'Delete Job'}
           </button>
         </div>
       </div>
