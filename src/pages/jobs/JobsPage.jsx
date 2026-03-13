@@ -309,7 +309,7 @@ export default function JobsPage() {
                           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1L11 10H1L6 1Z" stroke="#c10007" strokeWidth="1.1" strokeLinejoin="round"/><path d="M6 4.5v2.5" stroke="#c10007" strokeWidth="1.1" strokeLinecap="round"/></svg>
                           Fleet Issue
                         </span>
-                      ) : <span className="text-[#90a1b9] text-[13px]">—</span>}
+                      ) : <span className="text-[#90a1b9] text-[13px]">No issues</span>}
                     </td>
 
                     <td className="px-4 py-[15px]"><StatusBadge status={job.status} /></td>
