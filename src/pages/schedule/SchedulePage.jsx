@@ -1,41 +1,64 @@
 // src/pages/schedule/SchedulePage.jsx
-// Schedule — full month calendar with drag-and-drop job scheduling
-//
-// Drag an unscheduled job from the left panel onto any calendar day to schedule it.
-// Drag an already-scheduled job chip to a new day to reschedule it.
-//
-// API (commented out — uncomment when backend ready):
-//   PATCH /api/jobs/{id}/schedule/
-//   Body: { "scheduled_datetime": "2026-03-05T19:07:37.085Z" }
+// Schedule — month calendar with drag-and-drop job scheduling
+// API integrated:
+//   GET  /api/jobs/                  → load all jobs (scheduled + unscheduled)
+//   PATCH /api/jobs/{id}/schedule/   → { scheduled_datetime: ISO | null }
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useRef } from 'react'
-import { useNavigate }       from 'react-router-dom'
-import { JOBS_FULL }         from '@/data/jobsFullMock'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { useNavigate }                               from 'react-router-dom'
+import { apiFetch }                                  from '@/utils/apiFetch'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const DAYS   = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTHS = ['January','February','March','April','May','June',
                 'July','August','September','October','November','December']
 
-function daysInMonth(year, month) { return new Date(year, month + 1, 0).getDate() }
+function daysInMonth(year, month)   { return new Date(year, month + 1, 0).getDate() }
 function firstDayOfMonth(year, month) { return new Date(year, month, 1).getDay() }
 
-// Parse "Oct 24, 2023" → { year, month (0-based), day }
-function parseSchedule(str) {
-  if (!str) return null
-  const d = new Date(str)
+// Parse ISO datetime string → { year, month (0-based), day, time "HH:MM" }
+function parseISO(iso) {
+  if (!iso) return null
+  const d = new Date(iso)
   if (isNaN(d)) return null
-  return { year: d.getFullYear(), month: d.getMonth(), day: d.getDate() }
+  return {
+    year:  d.getFullYear(),
+    month: d.getMonth(),
+    day:   d.getDate(),
+    time:  `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`,
+  }
 }
 
-// Build ISO datetime string for a given date + optional time
+// Build ISO datetime string for a given date + time string "HH:MM"
 function toISO(year, month, day, time = '09:00') {
   const [h, m] = time.split(':').map(Number)
   return new Date(year, month, day, h, m).toISOString()
 }
 
-// ── Status → chip colour map (Figma-exact) ────────────────────────────────────
+// Map API job → internal shape used by calendar
+function mapJob(j) {
+  const parsed = parseISO(j.scheduled_datetime)
+  return {
+    // keep original id (UUID) for API calls and navigation
+    id:             j.id,
+    job_id:         j.job_id,           // display label e.g. "JB-1024"
+    client:         j.client_name ?? j.client?.name ?? '—',
+    priority:       j.priority ? j.priority.charAt(0).toUpperCase() + j.priority.slice(1) : 'Low',
+    status:         apiStatusToDisplay(j.status),
+    scheduledDate:  parsed ? { year: parsed.year, month: parsed.month, day: parsed.day } : null,
+    scheduledTime:  parsed?.time ?? '09:00',
+    _isScheduled:   !!parsed,
+    _raw:           j,
+  }
+}
+
+function apiStatusToDisplay(s) {
+  const map = { pending: 'Pending', in_progress: 'In Progress', completed: 'Completed', overdue: 'Overdue' }
+  return map[s] ?? s ?? 'Pending'
+}
+
+// ── Status → chip colour map ───────────────────────────────────────────────────
 const STATUS_CHIP = {
   'Pending':     { bg: 'bg-[#eff6ff]', border: 'border-[#bfdbfe]', text: 'text-[#1d4ed8]', dot: 'bg-[#3b82f6]', time: 'text-[#3b82f6]' },
   'In Progress': { bg: 'bg-[#fff7ed]', border: 'border-[#fed7aa]', text: 'text-[#c73b00]', dot: 'bg-[#f54900]', time: 'text-[#f54900]' },
@@ -46,9 +69,10 @@ const DEFAULT_CHIP = { bg: 'bg-[#f8fafc]', border: 'border-[#e2e8f0]', text: 'te
 
 // ── Priority badge colours ─────────────────────────────────────────────────────
 const PRIORITY_COLOR = {
-  High:   'bg-[#fef2f2] text-[#c10007]',
-  Medium: 'bg-[#fff7ed] text-[#c73b00]',
-  Low:    'bg-[#f0fdf4] text-[#007a55]',
+  High:     'bg-[#fef2f2] text-[#c10007]',
+  Medium:   'bg-[#fff7ed] text-[#c73b00]',
+  Low:      'bg-[#f0fdf4] text-[#007a55]',
+  Critical: 'bg-[#fef2f2] text-[#c10007]',
 }
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -60,9 +84,9 @@ function IconBriefcase() { return <svg width="13" height="13" viewBox="0 0 13 13
 function IconCalPlus()   { return <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.2"/><path d="M5 1.5v2M10 1.5v2M1 6.5h13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M7.5 9v3M6 10.5h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> }
 function IconX()         { return <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg> }
 
-// ── Time picker modal (shown on drop) ─────────────────────────────────────────
-function TimePickerModal({ job, date, onConfirm, onCancel }) {
-  const [time, setTime] = useState('09:00')
+// ── Time picker modal ─────────────────────────────────────────────────────────
+function TimePickerModal({ job, date, saving, onConfirm, onCancel }) {
+  const [time, setTime] = useState(job.scheduledTime ?? '09:00')
   const label = `${MONTHS[date.month].slice(0,3)} ${date.day}, ${date.year}`
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172b]/40 backdrop-blur-sm"
@@ -72,7 +96,7 @@ function TimePickerModal({ job, date, onConfirm, onCancel }) {
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#f1f5f9]">
           <div>
             <h3 className="text-[#0f172b] font-bold text-[16px]">Schedule Job</h3>
-            <p className="text-[#90a1b9] text-[12px] mt-0.5">{job.id} · {job.client}</p>
+            <p className="text-[#90a1b9] text-[12px] mt-0.5">{job.job_id} · {job.client}</p>
           </div>
           <button onClick={onCancel} className="text-[#90a1b9] hover:text-[#314158] transition-colors"><IconX /></button>
         </div>
@@ -88,13 +112,15 @@ function TimePickerModal({ job, date, onConfirm, onCancel }) {
           </div>
         </div>
         <div className="flex gap-3 px-5 pb-5">
-          <button onClick={onCancel}
-            className="flex-1 py-[9px] rounded-[10px] border border-[#e2e8f0] text-[#314158] text-[14px] font-semibold hover:bg-[#f8fafc] transition-colors">
+          <button onClick={onCancel} disabled={saving}
+            className="flex-1 py-[9px] rounded-[10px] border border-[#e2e8f0] text-[#314158] text-[14px] font-semibold hover:bg-[#f8fafc] transition-colors disabled:opacity-40">
             Cancel
           </button>
-          <button onClick={() => onConfirm(time)}
-            className="flex-1 py-[9px] rounded-[10px] bg-[#f54900] hover:bg-[#c73b00] text-white text-[14px] font-semibold transition-colors shadow-[0_1px_3px_rgba(245,73,0,0.3)]">
-            Confirm
+          <button onClick={() => onConfirm(time)} disabled={saving}
+            className="flex-1 py-[9px] rounded-[10px] bg-[#f54900] hover:bg-[#c73b00] text-white text-[14px] font-semibold transition-colors shadow-[0_1px_3px_rgba(245,73,0,0.3)] disabled:opacity-60 flex items-center justify-center gap-2">
+            {saving
+              ? <><div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin"/>Saving…</>
+              : 'Confirm'}
           </button>
         </div>
       </div>
@@ -105,7 +131,6 @@ function TimePickerModal({ job, date, onConfirm, onCancel }) {
 // ── Job chip (on calendar) ────────────────────────────────────────────────────
 function JobChip({ job, onDragStart, onClick }) {
   const c = STATUS_CHIP[job.status] ?? DEFAULT_CHIP
-  const timeStr = job.scheduledTime ?? '09:00'
   return (
     <div
       draggable
@@ -114,10 +139,10 @@ function JobChip({ job, onDragStart, onClick }) {
       className={`flex flex-col px-2 py-1.5 rounded-[6px] border cursor-grab active:cursor-grabbing hover:brightness-95 transition-all select-none ${c.bg} ${c.border}`}
     >
       <span className={`text-[11px] font-bold leading-[15px] truncate ${c.text}`}>
-        {job.id}: {job.client}
+        {job.job_id}: {job.client}
       </span>
       <span className={`flex items-center gap-1 text-[10px] mt-0.5 ${c.time}`}>
-        <IconClock /> {timeStr}
+        <IconClock /> {job.scheduledTime}
       </span>
     </div>
   )
@@ -134,7 +159,7 @@ function UnscheduledRow({ job, onDragStart }) {
     >
       <span className="text-[#cad5e2] shrink-0"><IconGrip /></span>
       <div className="flex-1 min-w-0">
-        <p className="text-[#0f172b] text-[12px] font-bold truncate">{job.id}</p>
+        <p className="text-[#0f172b] text-[12px] font-bold truncate">{job.job_id}</p>
         <p className="text-[#62748e] text-[11px] truncate">{job.client}</p>
       </div>
       <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${p}`}>
@@ -147,38 +172,38 @@ function UnscheduledRow({ job, onDragStart }) {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function SchedulePage() {
   const navigate = useNavigate()
-
-  // ── Calendar state ─────────────────────────────────────────────────────────
   const today = new Date()
-  // ── Calendar initial view: current real month/year ─────────────────────────
-  // To hardcode Oct 2025 (matching mock data), comment the two `today` lines
-  // below and uncomment these instead:
-  // const [viewYear,  setViewYear]  = useState(2025)
-  // const [viewMonth, setViewMonth] = useState(9)       // 0-based; 9 = October
+
+  // ── Calendar view state ────────────────────────────────────────────────────
   const [viewYear,  setViewYear]  = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())
-  const [viewMode,  setViewMode]  = useState('month') // 'month' | 'week' | 'day'
+  const [viewMode,  setViewMode]  = useState('month')
 
-  // ── Jobs state: each job carries optional scheduledDate { year, month, day } + scheduledTime ──
-  const [jobs, setJobs] = useState(() =>
-    JOBS_FULL.map(j => {
-      const parsed = parseSchedule(j.schedule)
-      return {
-        ...j,
-        scheduledDate: parsed,
-        scheduledTime: '09:00',
-        _isScheduled:  !!parsed,
-      }
-    })
-  )
+  // ── Jobs state ─────────────────────────────────────────────────────────────
+  const [jobs,    setJobs]    = useState([])
+  const [loading, setLoading] = useState(true)
 
   // ── Drag state ─────────────────────────────────────────────────────────────
-  const draggingJob = useRef(null)
-  const [dragOverDay,   setDragOverDay]   = useState(null)   // { year, month, day }
-  const [dragOverPanel, setDragOverPanel] = useState(false)  // hovering unscheduled panel
+  const draggingJob  = useRef(null)
+  const [dragOverDay,   setDragOverDay]   = useState(null)
+  const [dragOverPanel, setDragOverPanel] = useState(false)
 
   // ── Time-picker modal state ────────────────────────────────────────────────
   const [pendingDrop, setPendingDrop] = useState(null) // { job, date }
+  const [modalSaving, setModalSaving] = useState(false)
+
+  // ── Fetch all jobs from API ────────────────────────────────────────────────
+  const fetchJobs = useCallback(async () => {
+    setLoading(true)
+    // Fetch all jobs — no pagination limit needed for calendar view
+    const { data, ok } = await apiFetch('jobs/?page_size=500')
+    if (ok && data) {
+      setJobs((data.results ?? []).map(mapJob))
+    }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { fetchJobs() }, [fetchJobs])
 
   // ── Navigation ─────────────────────────────────────────────────────────────
   const prevMonth = () => {
@@ -201,22 +226,22 @@ export default function SchedulePage() {
       j.scheduledDate?.day   === day
     ).sort((a, b) => (a.scheduledTime > b.scheduledTime ? 1 : -1))
 
-  // ── Calendar grid rows ─────────────────────────────────────────────────────
-  const firstDay    = firstDayOfMonth(viewYear, viewMonth)
-  const totalDays   = daysInMonth(viewYear, viewMonth)
-  const prevDays    = daysInMonth(viewYear, viewMonth === 0 ? 11 : viewMonth - 1)
-  const totalCells  = Math.ceil((firstDay + totalDays) / 7) * 7
+  // ── Calendar grid ──────────────────────────────────────────────────────────
+  const firstDay   = firstDayOfMonth(viewYear, viewMonth)
+  const totalDays  = daysInMonth(viewYear, viewMonth)
+  const prevDays   = daysInMonth(viewYear, viewMonth === 0 ? 11 : viewMonth - 1)
+  const totalCells = Math.ceil((firstDay + totalDays) / 7) * 7
   const cells = Array.from({ length: totalCells }, (_, i) => {
     if (i < firstDay) {
-      const prevMonth = viewMonth === 0 ? 11 : viewMonth - 1
-      const prevYear  = viewMonth === 0 ? viewYear - 1 : viewYear
-      return { day: prevDays - firstDay + i + 1, month: prevMonth, year: prevYear, current: false }
+      const pm = viewMonth === 0 ? 11 : viewMonth - 1
+      const py = viewMonth === 0 ? viewYear - 1 : viewYear
+      return { day: prevDays - firstDay + i + 1, month: pm, year: py, current: false }
     }
     const d = i - firstDay + 1
     if (d > totalDays) {
-      const nextM = viewMonth === 11 ? 0 : viewMonth + 1
-      const nextY = viewMonth === 11 ? viewYear + 1 : viewYear
-      return { day: d - totalDays, month: nextM, year: nextY, current: false }
+      const nm = viewMonth === 11 ? 0 : viewMonth + 1
+      const ny = viewMonth === 11 ? viewYear + 1 : viewYear
+      return { day: d - totalDays, month: nm, year: ny, current: false }
     }
     return { day: d, month: viewMonth, year: viewYear, current: true }
   })
@@ -236,102 +261,86 @@ export default function SchedulePage() {
     e.dataTransfer.dropEffect = 'move'
     setDragOverDay({ year: cell.year, month: cell.month, day: cell.day })
   }
-  const handleDragLeave = () => setDragOverDay(null)
+  const handleDragLeave  = () => setDragOverDay(null)
+  const handleDragEnd    = () => { draggingJob.current = null; setDragOverDay(null) }
+
   const handleDrop = (e, cell) => {
     e.preventDefault()
     setDragOverDay(null)
     const job = draggingJob.current
     draggingJob.current = null
     if (!job) return
-    const date = { year: cell.year, month: cell.month, day: cell.day }
-    // Open time picker modal
-    setPendingDrop({ job, date })
+    // Open time picker — confirm will fire the API call
+    setPendingDrop({ job, date: { year: cell.year, month: cell.month, day: cell.day } })
   }
-  const handleDragEnd = () => { draggingJob.current = null; setDragOverDay(null) }
 
-  // ── Panel drag handlers (drop onto unscheduled panel = unschedule) ─────────
-  const handlePanelDragOver = (e) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-    setDragOverPanel(true)
-  }
+  // ── Panel drag handlers (drop onto panel = unschedule) ─────────────────────
+  const handlePanelDragOver  = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverPanel(true) }
   const handlePanelDragLeave = () => setDragOverPanel(false)
-  const handlePanelDrop = (e) => {
+  const handlePanelDrop = async (e) => {
     e.preventDefault()
     setDragOverPanel(false)
     const job = draggingJob.current
     draggingJob.current = null
-    if (!job || !job._isScheduled) return   // already unscheduled — no-op
+    if (!job || !job._isScheduled) return
 
-    // Optimistic update: clear schedule
+    // Optimistic update
     setJobs(prev => prev.map(j =>
       j.id === job.id
         ? { ...j, scheduledDate: null, scheduledTime: '09:00', _isScheduled: false }
         : j
     ))
 
-    // ── API call — uncomment when backend ready ──────────────────────────
-    // const apiBase   = import.meta.env.VITE_API_BASE_URL
-    // const endpoint  = `${apiBase}jobs/${job.id}/schedule/`
-    //
-    // try {
-    //   await fetch(endpoint, {
-    //     method:  'PATCH',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body:    JSON.stringify({ scheduled_datetime: null }),
-    //   })
-    // } catch (err) {
-    //   console.error('Failed to unschedule job:', err)
-    //   // Optionally revert optimistic update here
-    // }
-    // ── End API call ─────────────────────────────────────────────────────
+    // API call — send null to unschedule
+    const { ok } = await apiFetch(`jobs/${job.id}/schedule/`, {
+      method: 'PATCH',
+      body: JSON.stringify({ scheduled_datetime: null }),
+    })
+    if (!ok) {
+      // Revert optimistic update on failure
+      setJobs(prev => prev.map(j => j.id === job.id ? job : j))
+    }
   }
 
   // ── Confirm scheduling after time pick ────────────────────────────────────
-  const confirmSchedule = (time) => {
+  const confirmSchedule = async (time) => {
     const { job, date } = pendingDrop
-    setPendingDrop(null)
+    const isoString = toISO(date.year, date.month, date.day, time)
 
-    setJobs(prev => prev.map(j =>
-      j.id === job.id
-        ? { ...j, scheduledDate: date, scheduledTime: time, _isScheduled: true }
-        : j
-    ))
+    setModalSaving(true)
 
-    // ── API call — uncomment when backend ready ──────────────────────────
-    // const apiBase    = import.meta.env.VITE_API_BASE_URL
-    // const endpoint   = `${apiBase}jobs/${job.id}/schedule/`
-    // const isoString  = toISO(date.year, date.month, date.day, time)
-    //
-    // try {
-    //   await fetch(endpoint, {
-    //     method:  'PATCH',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body:    JSON.stringify({ scheduled_datetime: isoString }),
-    //   })
-    // } catch (err) {
-    //   console.error('Failed to schedule job:', err)
-    //   // Optionally revert optimistic update here
-    // }
-    // ── End API call ─────────────────────────────────────────────────────
+    const { ok } = await apiFetch(`jobs/${job.id}/schedule/`, {
+      method: 'PATCH',
+      body: JSON.stringify({ scheduled_datetime: isoString }),
+    })
+
+    if (ok) {
+      // Apply confirmed update to state
+      setJobs(prev => prev.map(j =>
+        j.id === job.id
+          ? { ...j, scheduledDate: date, scheduledTime: time, _isScheduled: true }
+          : j
+      ))
+      setPendingDrop(null)
+    }
+    // If API fails, leave modal open so user can retry or cancel
+    setModalSaving(false)
   }
 
-  // ── Unschedule (right-click chip to remove from calendar) ─────────────────
   const handleChipClick = (job) => {
-    // Navigate to job detail on click
     navigate(`/admin/jobs/${job.id}`)
   }
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <>
-      {/* Time picker modal */}
       {pendingDrop && (
         <TimePickerModal
           job={pendingDrop.job}
           date={pendingDrop.date}
+          saving={modalSaving}
           onConfirm={confirmSchedule}
-          onCancel={() => setPendingDrop(null)}
+          onCancel={() => { if (!modalSaving) setPendingDrop(null) }}
         />
       )}
 
@@ -341,9 +350,7 @@ export default function SchedulePage() {
         <div
           className={[
             'w-[220px] shrink-0 border-r flex flex-col transition-colors duration-100',
-            dragOverPanel
-              ? 'bg-[#fff4ee] border-[#f54900]/30'
-              : 'bg-white border-[#e2e8f0]',
+            dragOverPanel ? 'bg-[#fff4ee] border-[#f54900]/30' : 'bg-white border-[#e2e8f0]',
           ].join(' ')}
           onDragOver={handlePanelDragOver}
           onDragLeave={handlePanelDragLeave}
@@ -365,12 +372,15 @@ export default function SchedulePage() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
-            {dragOverPanel && (
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <div className="w-5 h-5 rounded-full border-2 border-[#e2e8f0] border-t-[#f54900] animate-spin"/>
+              </div>
+            ) : dragOverPanel ? (
               <div className="flex items-center justify-center h-12 rounded-[8px] border-2 border-dashed border-[#f54900]/50 text-[#f54900] text-[11px] font-semibold">
                 Drop to unschedule
               </div>
-            )}
-            {unscheduled.length === 0 && !dragOverPanel ? (
+            ) : unscheduled.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
                 <span className="text-[#e2e8f0]"><IconCalPlus /></span>
                 <p className="text-[#cad5e2] text-[12px]">All jobs scheduled</p>
@@ -435,73 +445,83 @@ export default function SchedulePage() {
               ))}
             </div>
 
-            {/* Calendar rows */}
-            <div className="flex flex-col divide-y divide-[#f1f5f9]">
-              {rows.map((row, ri) => (
-                <div key={ri} className="grid grid-cols-7 divide-x divide-[#f1f5f9]" style={{ minHeight: '120px' }}>
-                  {row.map((cell, ci) => {
-                    const dayJobs  = scheduledOnDay(cell.year, cell.month, cell.day)
-                    const isOver   = dragOverDay?.year === cell.year && dragOverDay?.month === cell.month && dragOverDay?.day === cell.day
-                    const todayDay = isToday(cell.year, cell.month, cell.day)
+            {/* Loading overlay */}
+            {loading ? (
+              <div className="flex items-center justify-center py-24">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-7 h-7 rounded-full border-2 border-[#e2e8f0] border-t-[#f54900] animate-spin"/>
+                  <p className="text-[#90a1b9] text-[13px]">Loading schedule…</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col divide-y divide-[#f1f5f9]">
+                {rows.map((row, ri) => (
+                  <div key={ri} className="grid grid-cols-7 divide-x divide-[#f1f5f9]" style={{ minHeight: '120px' }}>
+                    {row.map((cell, ci) => {
+                      const dayJobs = scheduledOnDay(cell.year, cell.month, cell.day)
+                      const isOver  = dragOverDay?.year === cell.year && dragOverDay?.month === cell.month && dragOverDay?.day === cell.day
+                      const todayDay = isToday(cell.year, cell.month, cell.day)
 
-                    return (
-                      <div
-                        key={ci}
-                        onDragOver={e => handleDragOver(e, cell)}
-                        onDragLeave={handleDragLeave}
-                        onDrop={e => handleDrop(e, cell)}
-                        className={[
-                          'p-2 flex flex-col gap-1.5 transition-colors duration-100 min-h-[120px]',
-                          !cell.current ? 'bg-[#fafafa]' : '',
-                          isOver ? 'bg-[#fff4ee] ring-2 ring-inset ring-[#f54900]/30' : '',
-                        ].join(' ')}
-                      >
-                        {/* Day number */}
-                        <div className="flex items-center justify-between">
-                          <span className={[
-                            'text-[13px] font-bold w-7 h-7 flex items-center justify-center rounded-full leading-none',
-                            todayDay
-                              ? 'bg-[#f54900] text-white'
-                              : cell.current
-                                ? 'text-[#0f172b]'
-                                : 'text-[#cad5e2]',
-                          ].join(' ')}>
-                            {cell.day}
-                          </span>
-                          {dayJobs.length > 0 && (
-                            <span className="text-[10px] text-[#90a1b9] font-medium">
-                              {dayJobs.length} job{dayJobs.length > 1 ? 's' : ''}
+                      return (
+                        <div
+                          key={ci}
+                          onDragOver={e => handleDragOver(e, cell)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={e => handleDrop(e, cell)}
+                          onDragEnd={handleDragEnd}
+                          className={[
+                            'p-2 flex flex-col gap-1.5 transition-colors duration-100 min-h-[120px]',
+                            !cell.current ? 'bg-[#fafafa]' : '',
+                            isOver ? 'bg-[#fff4ee] ring-2 ring-inset ring-[#f54900]/30' : '',
+                          ].join(' ')}
+                        >
+                          {/* Day number */}
+                          <div className="flex items-center justify-between">
+                            <span className={[
+                              'text-[13px] font-bold w-7 h-7 flex items-center justify-center rounded-full leading-none',
+                              todayDay
+                                ? 'bg-[#f54900] text-white'
+                                : cell.current
+                                  ? 'text-[#0f172b]'
+                                  : 'text-[#cad5e2]',
+                            ].join(' ')}>
+                              {cell.day}
+                            </span>
+                            {dayJobs.length > 0 && (
+                              <span className="text-[10px] text-[#90a1b9] font-medium">
+                                {dayJobs.length} job{dayJobs.length > 1 ? 's' : ''}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Job chips — max 3 visible */}
+                          {dayJobs.slice(0, 3).map(j => (
+                            <JobChip
+                              key={j.id}
+                              job={j}
+                              onDragStart={handleDragStart}
+                              onClick={handleChipClick}
+                            />
+                          ))}
+                          {dayJobs.length > 3 && (
+                            <span className="text-[10px] text-[#90a1b9] font-medium px-1">
+                              +{dayJobs.length - 3} more
                             </span>
                           )}
+
+                          {/* Drop hint */}
+                          {isOver && (
+                            <div className="flex items-center justify-center h-8 rounded-[6px] border-2 border-dashed border-[#f54900]/40 text-[#f54900] text-[11px] font-medium mt-auto">
+                              Drop here
+                            </div>
+                          )}
                         </div>
-
-                        {/* Job chips — max 3 visible, then +N more */}
-                        {dayJobs.slice(0, 3).map(j => (
-                          <JobChip
-                            key={j.id}
-                            job={j}
-                            onDragStart={handleDragStart}
-                            onClick={handleChipClick}
-                          />
-                        ))}
-                        {dayJobs.length > 3 && (
-                          <span className="text-[10px] text-[#90a1b9] font-medium px-1">
-                            +{dayJobs.length - 3} more
-                          </span>
-                        )}
-
-                        {/* Drop target hint */}
-                        {isOver && (
-                          <div className="flex items-center justify-center h-8 rounded-[6px] border-2 border-dashed border-[#f54900]/40 text-[#f54900] text-[11px] font-medium mt-auto">
-                            Drop here
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              ))}
-            </div>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Legend */}
