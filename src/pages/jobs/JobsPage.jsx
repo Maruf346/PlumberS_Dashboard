@@ -15,6 +15,7 @@ import JobsListFilters         from '@/components/jobs/JobsListFilters'
 import JobsActionMenu          from '@/components/jobs/JobsActionMenu'
 import JobsEmptyState          from '@/components/jobs/JobsEmptyState'
 import CreateJobPage           from '@/pages/createjob/CreateJobPage'
+import EditJobDrawer           from '@/pages/editjob/EditJobDrawer'
 import DeleteJobModal          from '@/components/editjob/DeleteJobModal'
 import { apiFetch }            from '@/utils/apiFetch'
 
@@ -71,6 +72,7 @@ export default function JobsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const [editTarget, setEditTarget] = useState(null) // job object to edit
 
   // ── URL params ─────────────────────────────────────────────────────────────
   const search   = searchParams.get('search')  ?? ''
@@ -177,6 +179,23 @@ export default function JobsPage() {
       {/* Create drawer */}
       <div className={['fixed top-0 right-0 z-40 h-screen transition-transform duration-300 ease-in-out', drawerOpen ? 'translate-x-0' : 'translate-x-full'].join(' ')}>
         <CreateJobPage onClose={() => setDrawerOpen(false)} onSaved={() => { setDrawerOpen(false); fetchJobs(); fetchStats() }} />
+      </div>
+
+      {/* Edit drawer backdrop */}
+      {editTarget && (
+        <div className="fixed inset-0 z-30 bg-[#0f172b]/40 backdrop-blur-[2px] transition-opacity duration-300"
+          onClick={() => setEditTarget(null)} aria-hidden="true" />
+      )}
+
+      {/* Edit drawer */}
+      <div className={['fixed top-0 right-0 z-40 h-screen transition-transform duration-300 ease-in-out', editTarget ? 'translate-x-0' : 'translate-x-full'].join(' ')}>
+        <EditJobDrawer
+          jobId={editTarget?.id}
+          job={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSaved={() => { setEditTarget(null); fetchJobs(); fetchStats() }}
+          onDeleted={() => { setEditTarget(null); fetchJobs(); fetchStats() }}
+        />
       </div>
 
       <div className="p-6 lg:p-8 flex flex-col gap-6 max-w-[1600px]">
@@ -301,7 +320,7 @@ export default function JobsPage() {
                     </td>
 
                     <td className="px-4 py-[15px] text-right" onClick={e => e.stopPropagation()}>
-                      <JobsActionMenu jobId={job.id} onDelete={() => setDeleteTarget(job)} />
+                      <JobsActionMenu jobId={job.id} onDelete={() => setDeleteTarget(job)} onEdit={() => setEditTarget(job)} />
                     </td>
                   </tr>
                 ))}

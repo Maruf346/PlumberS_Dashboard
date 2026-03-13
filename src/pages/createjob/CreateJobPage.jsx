@@ -36,7 +36,7 @@ const PRIORITY_OPTIONS = [
   { value: 'low',      label: 'Low'      },
   { value: 'medium',   label: 'Medium'   },
   { value: 'high',     label: 'High'     },
-  { value: 'critical', label: 'Critical' },
+  { value: 'urgent', label: 'Urgent' },
 ]
 
 // ── Locked auto-fill field ────────────────────────────────────────────────────
@@ -243,14 +243,14 @@ export default function CreateJobPage({ onClose, onSaved }) {
       return
     }
 
-    // Upload attachments if any
-    const jobId = data.id
+    // Upload attachments — one single multipart call, all files under 'files' key.
+    // Backend response is { data: { id: "..." } }
+    const jobId = data?.data?.id ?? data?.id
     if (jobId && attachFiles.length > 0) {
-      for (const file of attachFiles) {
-        const fd = new FormData()
-        fd.append('file', file)
-        await apiFetch(`jobs/${jobId}/attachments/`, { method: 'POST', body: fd })
-      }
+      const fd = new FormData()
+      attachFiles.forEach(file => fd.append('files', file))
+      // Do NOT set Content-Type — browser sets it automatically with the multipart boundary
+      await apiFetch(`jobs/${jobId}/attachments/`, { method: 'POST', body: fd })
     }
 
     setSaving(false)

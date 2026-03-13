@@ -93,7 +93,7 @@ function FullLogModal({ jobId, initialItems, onClose }) {
 // ── LiveActivityCard ──────────────────────────────────────────────────────────
 export default function LiveActivityCard({ jobId, activities }) {
   const [showModal, setShowModal] = useState(false)
-  const preview = (activities ?? []).slice(0, 5)
+  const preview = (activities ?? []).slice(0, 3)
 
   return (
     <>
@@ -133,7 +133,7 @@ export default function LiveActivityCard({ jobId, activities }) {
         <div className="border-t border-[#f1f5f9] px-4 py-4">
           <button onClick={() => setShowModal(true)}
             className="w-full text-[#314158] text-[14px] font-medium leading-[20px] py-[9px] rounded-[10px] bg-[#f8fafc] hover:bg-[#f1f5f9] transition-colors">
-            View Full Log {activities?.length > 5 ? `(${activities.length})` : ''}
+            View Full Log {activities?.length > 3 ? `(${activities.length})` : ''}
           </button>
         </div>
       </div>

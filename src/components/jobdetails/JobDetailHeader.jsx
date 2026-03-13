@@ -1,11 +1,12 @@
-// src/components/jobdetails/JobDetailHeader.jsx — real API job data
-
-import { Link }   from 'react-router-dom'
+// src/components/jobdetails/JobDetailHeader.jsx
+// Edit button now calls onEdit prop (opens drawer) instead of navigating to route
 
 function IconArrowLeft() { return <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12.5 15L7.5 10l5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg> }
 function IconPrinter()   { return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="3" y="1" width="10" height="5" rx="1" stroke="#314158" strokeWidth="1.2"/><path d="M3 6h10v6H3z" stroke="#314158" strokeWidth="1.2" strokeLinejoin="round"/><path d="M5 9h6M5 11h4" stroke="#314158" strokeWidth="1.2" strokeLinecap="round"/><path d="M3 8H1V5h14v3h-2" stroke="#314158" strokeWidth="1.2" strokeLinejoin="round"/></svg> }
 function IconEdit()      { return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11 2l3 3-9 9H2v-3l9-9z" stroke="#314158" strokeWidth="1.2" strokeLinejoin="round"/></svg> }
 function IconTrash()     { return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10" stroke="#c10007" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg> }
+
+import { useNavigate } from 'react-router-dom'
 
 const STATUS_DOT = {
   'pending':     'bg-[#fe9a00]',
@@ -33,7 +34,8 @@ const PRIORITY_STYLES = {
 }
 const PRIORITY_LABEL = { low: 'Low', medium: 'Medium', high: 'High', critical: 'Critical' }
 
-export default function JobDetailHeader({ job, onDelete }) {
+export default function JobDetailHeader({ job, onEdit, onDelete }) {
+  const navigate = useNavigate()
   if (!job) return null
 
   return (
@@ -41,10 +43,11 @@ export default function JobDetailHeader({ job, onDelete }) {
 
       {/* Left: back + identity */}
       <div className="flex items-center gap-3 min-w-0">
-        <Link to="/admin/jobs"
+        <button
+          onClick={() => navigate('/admin/jobs')}
           className="flex items-center justify-center w-9 h-9 rounded-[8px] border border-[#e2e8f0] bg-white hover:bg-[#f8fafc] text-[#314158] transition-colors shrink-0">
           <IconArrowLeft />
-        </Link>
+        </button>
 
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -65,15 +68,18 @@ export default function JobDetailHeader({ job, onDelete }) {
 
       {/* Right: actions */}
       <div className="flex items-center gap-2 shrink-0">
-        <button className="flex items-center justify-center w-8 h-8 rounded-[8px] border border-[#e2e8f0] bg-white hover:bg-[#f8fafc] transition-colors">
+        {/* <button className="flex items-center justify-center w-8 h-8 rounded-[8px] border border-[#e2e8f0] bg-white hover:bg-[#f8fafc] transition-colors">
           <IconPrinter />
         </button>
-        <div className="w-px h-6 bg-[#e2e8f0]" />
-        <Link to={`/admin/jobs/${job.id}/edit`}
+        <div className="w-px h-6 bg-[#e2e8f0]" /> */}
+        {/* Edit button — calls onEdit to open drawer on this same page */}
+        <button
+          onClick={onEdit}
           className="flex items-center gap-1.5 px-3 py-[7px] rounded-[8px] border border-[#e2e8f0] bg-white hover:bg-[#f8fafc] text-[#314158] text-[13px] font-medium transition-colors">
           <IconEdit /> Edit
-        </Link>
-        <button onClick={onDelete}
+        </button>
+        <button
+          onClick={onDelete}
           className="flex items-center gap-1.5 px-3 py-[7px] rounded-[8px] border border-[#ffe2e2] bg-[#fef2f2] hover:bg-[#ffe2e2] text-[#c10007] text-[13px] font-medium transition-colors">
           <IconTrash /> Delete
         </button>

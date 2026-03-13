@@ -29,7 +29,7 @@ export default function JobsActionMenu({ jobId, onDelete }) {
   }, [open])
 
   const handleView = (e) => { e.stopPropagation(); setOpen(false); navigate(`/admin/jobs/${jobId}`) }
-  const handleEdit = (e) => { e.stopPropagation(); setOpen(false); navigate(`/admin/jobs/${jobId}/edit`) }
+  const handleEdit = (e) => { e.stopPropagation(); setOpen(false); onEdit?.() }
   const handleDelete = (e) => { e.stopPropagation(); setOpen(false); onDelete?.(jobId) }
 
   return (
@@ -46,9 +46,9 @@ export default function JobsActionMenu({ jobId, onDelete }) {
           <button onClick={handleView}  className="flex items-center gap-2.5 w-full px-3 py-2 text-[13px] text-[#314158] hover:bg-[#f8fafc] transition-colors">
             <IconEye />  View Details
           </button>
-          <button onClick={handleEdit}  className="flex items-center gap-2.5 w-full px-3 py-2 text-[13px] text-[#314158] hover:bg-[#f8fafc] transition-colors">
+          {/* <button onClick={handleEdit}  className="flex items-center gap-2.5 w-full px-3 py-2 text-[13px] text-[#314158] hover:bg-[#f8fafc] transition-colors">
             <IconEdit /> Edit Job
-          </button>
+          </button> */}
           <div className="h-px bg-[#f1f5f9] mx-2 my-1" />
           <button onClick={handleDelete} className="flex items-center gap-2.5 w-full px-3 py-2 text-[13px] text-[#c10007] hover:bg-[#fef2f2] transition-colors">
             <IconTrash /> Delete
