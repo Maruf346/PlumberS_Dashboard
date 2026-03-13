@@ -14,9 +14,9 @@ function IconX()     { return <svg width="13" height="13" viewBox="0 0 13 13" fi
 
 // ── Editable row (add/edit mode) ─────────────────────────────────────────────
 function EditRow({ initial, onSave, onCancel, saving }) {
-  const [item,       setItem]       = useState(initial?.item       ?? '')
-  const [quantity,   setQuantity]   = useState(initial?.quantity   ?? '')
-  const [unit_price, setUnitPrice]  = useState(initial?.unit_price ?? '')
+  const [item,       setItem]      = useState(initial?.item       ?? '')
+  const [quantity,   setQuantity]  = useState(initial?.quantity   ?? '')
+  const [unit_price, setUnitPrice] = useState(initial?.unit_price ?? '')
 
   const inputCls = "w-full h-[32px] border border-[#e2e8f0] rounded-[6px] px-2 text-[13px] text-[#0f172b] focus:outline-none focus:ring-1 focus:ring-[#f54900]/30 focus:border-[#f54900]/50 bg-white"
 
@@ -63,7 +63,14 @@ export default function LineItemsTab({ job, onJobUpdate }) {
       method: 'POST',
       body: JSON.stringify({ item, quantity: String(quantity), unit_price: String(unit_price), order: lineItems.length }),
     })
-    if (ok && data) { setLineItems(prev => [...prev, data]); setAddingNew(false) }
+    if (ok && data) {
+      // Compute total locally in case the API doesn't return it on the new item
+      const newItem = { ...data, total: data.total ?? (parseFloat(quantity || 0) * parseFloat(unit_price || 0)) }
+      setLineItems(prev => [...prev, newItem])
+      setAddingNew(false)
+      // Refresh job so tab remounts (switching tabs and back) see the latest line_items
+      onJobUpdate?.()
+    }
     setSaving(false)
   }
 
@@ -74,7 +81,12 @@ export default function LineItemsTab({ job, onJobUpdate }) {
       method: 'PATCH',
       body: JSON.stringify({ item, quantity: String(quantity), unit_price: String(unit_price) }),
     })
-    if (ok && data) { setLineItems(prev => prev.map(li => li.id === id ? data : li)); setEditingId(null) }
+    if (ok && data) {
+      const updated = { ...data, total: data.total ?? (parseFloat(quantity || 0) * parseFloat(unit_price || 0)) }
+      setLineItems(prev => prev.map(li => li.id === id ? updated : li))
+      setEditingId(null)
+      onJobUpdate?.() // keep job prop in sync for tab remounts
+    }
     setSaving(false)
   }
 
@@ -82,7 +94,11 @@ export default function LineItemsTab({ job, onJobUpdate }) {
   const handleDelete = async (id) => {
     setDeletingId(id)
     const { ok } = await apiFetch(`jobs/${job.id}/line-items/${id}/`, { method: 'DELETE' })
-    if (ok) setLineItems(prev => prev.filter(li => li.id !== id))
+    if (ok) {
+      setLineItems(prev => prev.filter(li => li.id !== id))
+      // Refresh job so the deleted item doesn't reappear when switching tabs and back
+      onJobUpdate?.()
+    }
     setDeletingId(null)
   }
 
