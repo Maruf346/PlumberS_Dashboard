@@ -105,7 +105,7 @@ const NAV_GROUPS = [
   },
   {
     label: 'System',
-    items: ['reports', 'settings'],
+    items: ['settings'],
   },
 ]
 

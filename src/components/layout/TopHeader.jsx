@@ -326,61 +326,88 @@ export default function TopHeader({ onMenuToggle, sidebarCollapsed, isMobile }) 
   const { title } = useBreadcrumb()
 
   // ── Read user from sessionStorage (survives refresh) ─────────────────────
-  const [user] = useState(() => {
+  // Re-read on every render so it picks up after login without needing remount
+  const user = (() => {
     try { return JSON.parse(sessionStorage.getItem('user') ?? 'null') } catch { return null }
-  })
+  })()
 
   // ── Notification state ────────────────────────────────────────────────────
   const [unreadCount,       setUnreadCount]       = useState(0)
   const [showNotifications, setShowNotifications] = useState(false)
   const [showProfile,       setShowProfile]       = useState(false)
-  const wsRef = useRef(null)
+  const wsRef       = useRef(null)
+  const connectedRef = useRef(false) // track if WS + initial count fetch already done
 
-  // ── Fetch unread count via REST on mount ──────────────────────────────────
+  // ── refreshCount — callable any time ──────────────────────────────────────
   const refreshCount = useCallback(async () => {
     const { data, ok } = await apiFetch('notification/unread-count/')
     if (ok && data) setUnreadCount(data.unread_count ?? 0)
   }, [])
 
-  useEffect(() => { refreshCount() }, [refreshCount])
-
-  // ── WebSocket connection for real-time notifications ──────────────────────
+  // ── Connect WS + fetch initial count ──────────────────────────────────────
+  // Polls every 300ms until a token is available in sessionStorage.
+  // This handles the race condition where TopHeader mounts before login
+  // has written the token, and also handles the case where authStore.access
+  // is set but TopHeader never remounts (it's a persistent layout component).
   useEffect(() => {
-    const token = authStore.access ?? sessionStorage.getItem('access')
-    if (!token) return
+    const tryConnect = () => {
+      if (connectedRef.current) return // already connected, stop polling
 
-    // Derive WS base from VITE_API_BASE_URL
-    // e.g. "https://api.example.com/api/" → "wss://api.example.com"
-    // or   "http://localhost:8888/api/"   → "ws://localhost:8888"
-    const apiBase  = import.meta.env.VITE_API_BASE_URL ?? ''
-    const wsBase   = apiBase.replace(/^https?/, m => m === 'https' ? 'wss' : 'ws').replace(/\/api\/?$/, '')
-    const wsUrl    = `${wsBase}/ws/notifications/?token=${token}`
+      const token = sessionStorage.getItem('access') ?? authStore.access
+      if (!token) return // not logged in yet — will retry on next tick
 
-    let ws
-    try {
-      ws = new WebSocket(wsUrl)
-      wsRef.current = ws
+      connectedRef.current = true
 
-      ws.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data)
-          if (msg.type === 'unread_count') {
-            setUnreadCount(msg.count ?? 0)
-          } else if (msg.type === 'notification') {
-            // New notification arrived — bump count
-            setUnreadCount(prev => prev + 1)
+      // Fetch initial unread count immediately via REST
+      refreshCount()
+
+      // Open WebSocket for real-time updates
+      const apiBase = import.meta.env.VITE_API_BASE_URL ?? ''
+      const wsBase  = apiBase
+        .replace(/^https/, 'wss')
+        .replace(/^http/, 'ws')
+        .replace(/\/api\/?$/, '')
+      const wsUrl = `${wsBase}/ws/notifications/?token=${token}`
+
+      try {
+        const ws = new WebSocket(wsUrl)
+        wsRef.current = ws
+
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data)
+            // Backend sends unread_count immediately on connect and after each event
+            if (msg.type === 'unread_count') {
+              setUnreadCount(msg.count ?? 0)
+            } else if (msg.type === 'notification') {
+              setUnreadCount(prev => prev + 1)
+            }
+          } catch (_) {}
+        }
+
+        ws.onclose = () => {
+          // If connection drops unexpectedly, allow reconnect on next effect run
+          if (connectedRef.current) {
+            connectedRef.current = false
+            wsRef.current = null
           }
-        } catch (_) {}
-      }
+        }
 
-      ws.onerror = () => {}  // silent — REST fallback already shows count
-    } catch (_) {}
+        ws.onerror = () => {} // silent — REST fallback covers initial count
+      } catch (_) {}
+    }
+
+    // Try immediately, then poll until token is available
+    tryConnect()
+    const interval = setInterval(tryConnect, 300)
 
     return () => {
-      ws?.close()
+      clearInterval(interval)
+      wsRef.current?.close()
       wsRef.current = null
+      connectedRef.current = false
     }
-  }, [])
+  }, [refreshCount]) // refreshCount is stable (useCallback with [])
 
   const initials = user?.full_name
     ? user.full_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
