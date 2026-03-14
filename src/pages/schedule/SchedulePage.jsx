@@ -403,7 +403,7 @@ export default function SchedulePage() {
 
             <div className="flex items-center gap-3 shrink-0">
               {/* Month/Week/Day toggle */}
-              <div className="flex items-center bg-white border border-[#e2e8f0] rounded-[10px] p-[3px]">
+              {/* <div className="flex items-center bg-white border border-[#e2e8f0] rounded-[10px] p-[3px]">
                 {['month','week','day'].map(mode => (
                   <button key={mode} onClick={() => setViewMode(mode)}
                     className={`px-4 py-[6px] rounded-[7px] text-[13px] font-semibold capitalize transition-all ${
@@ -414,7 +414,7 @@ export default function SchedulePage() {
                     {mode.charAt(0).toUpperCase() + mode.slice(1)}
                   </button>
                 ))}
-              </div>
+              </div> */}
 
               {/* Month navigation */}
               <div className="flex items-center gap-1 bg-white border border-[#e2e8f0] rounded-[10px] px-2 py-[5px]">
