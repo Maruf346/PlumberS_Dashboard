@@ -221,7 +221,7 @@ export default function EditJobPage() {
       apiFetch('user/admin/employeelist/'),
       apiFetch('fleet/?include_inactive=false'),
       apiFetch('safety-forms/?all=true'),
-      apiFetch('api/reports/types/'),
+      apiFetch('reports/types/'),
       apiFetch(`jobs/${jobId}/`),
     ]).then(([c, m, s, v, sf, rt, j]) => {
       if (c.ok)  setClients(c.data?.results ?? c.data ?? [])

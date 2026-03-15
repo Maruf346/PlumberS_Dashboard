@@ -1,8 +1,8 @@
 // src/components/jobdetails/ReportsTab.jsx
 // Lists reports for a job, click to view submitted report, download PDF
 // GET /api/jobs/{job_id}/reports/
-// GET /api/api/reports/{job_report_id}/submission/
-// GET /api/api/reports/{job_report_id}/download/  (opens in new tab)
+// GET /api/reports/{job_report_id}/submission/
+// GET /api/reports/{job_report_id}/download/
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect } from 'react'
@@ -19,7 +19,6 @@ function fmtDt(iso) {
   return new Date(iso).toLocaleString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api/'
 
 // ── Report Submission Modal ───────────────────────────────────────────────────
 function ReportModal({ report, onClose }) {
@@ -28,14 +27,48 @@ function ReportModal({ report, onClose }) {
 
   useEffect(() => {
     if (!report.is_submitted) { setLoading(false); return }
-    apiFetch(`api/reports/${report.job_report_id}/submission/`).then(({ data, ok }) => {
+    apiFetch(`reports/${report.job_report_id}/submission/`).then(({ data, ok }) => {
       if (ok && data) setDetail(data)
       setLoading(false)
     })
   }, [report.job_report_id, report.is_submitted])
 
-  const handleDownload = () => {
-    window.open(`${BASE}api/reports/${report.job_report_id}/download/`, '_blank')
+  const [downloading, setDownloading] = useState(false)
+
+  const handleDownload = async () => {
+    setDownloading(true)
+    try {
+      const token = sessionStorage.getItem('access')
+      const base  = (import.meta.env.VITE_API_BASE_URL ?? '/api/').replace(/\/$/, '')
+      const url   = `${base}/reports/${report.job_report_id}/download/`
+
+      const res = await fetch(url, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      })
+
+      if (!res.ok) { setDownloading(false); return }
+
+      // Read response as blob (binary PDF data)
+      const blob = await res.blob()
+
+      // Try to get filename from Content-Disposition header, fall back to a sensible default
+      const disposition = res.headers.get('Content-Disposition') ?? ''
+      const match = disposition.match(/filename[^;=\n]*=["']?([^"';\n]+)/)
+      const filename = match?.[1]?.trim() || `report-${report.job_report_id}.pdf`
+
+      // Create a temporary object URL and trigger browser download
+      const objectUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href     = objectUrl
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(objectUrl)
+    } catch (_) {
+      // Silent fail — user will see nothing happened, which is acceptable
+    }
+    setDownloading(false)
   }
 
   return (
@@ -54,9 +87,11 @@ function ReportModal({ report, onClose }) {
           </div>
           <div className="flex items-center gap-2">
             {report.is_submitted && (
-              <button onClick={handleDownload}
-                className="flex items-center gap-1.5 px-3 py-[7px] rounded-[8px] border border-[#e2e8f0] text-[#314158] text-[13px] font-medium hover:bg-[#f8fafc] transition-colors">
-                <IconDownload /> Download PDF
+              <button onClick={handleDownload} disabled={downloading}
+                className="flex items-center gap-1.5 px-3 py-[7px] rounded-[8px] border border-[#e2e8f0] text-[#314158] text-[13px] font-medium hover:bg-[#f8fafc] transition-colors disabled:opacity-60">
+                {downloading
+                  ? <><div className="w-3 h-3 rounded-full border-2 border-[#314158]/30 border-t-[#314158] animate-spin"/>Downloading…</>
+                  : <><IconDownload /> Download PDF</>}
               </button>
             )}
             <button onClick={onClose} className="flex items-center justify-center w-8 h-8 rounded-[8px] border border-[#e2e8f0] hover:bg-[#f8fafc]"><IconClose /></button>
@@ -81,7 +116,7 @@ function ReportModal({ report, onClose }) {
               <div className="p-4 bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-[11px] font-semibold text-[#90a1b9] uppercase tracking-[0.5px]">Submitted By</p>
-                  <p className="text-[14px] font-medium text-[#0f172b] mt-1">{detail.submitted_by_name ?? '—'}</p>
+                  <p className="text-[14px] font-medium text-[#0f172b] mt-1">{detail.submitted_by ?? detail.data?.submitted_by_name ?? '—'}</p>
                 </div>
                 <div>
                   <p className="text-[11px] font-semibold text-[#90a1b9] uppercase tracking-[0.5px]">Submitted At</p>
@@ -89,22 +124,80 @@ function ReportModal({ report, onClose }) {
                 </div>
               </div>
 
-              {/* Report data — display all key-value pairs from the submission */}
-              {detail.data && typeof detail.data === 'object' && (
-                <div>
-                  <h4 className="text-[#0f172b] font-bold text-[14px] mb-3">Report Data</h4>
-                  <div className="flex flex-col gap-3">
-                    {Object.entries(detail.data).map(([k, v]) => (
-                      <div key={k}>
-                        <p className="text-[12px] font-semibold text-[#62748e] uppercase tracking-[0.4px]">{k.replace(/_/g, ' ')}</p>
-                        <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[8px] px-3 py-2.5 mt-1">
-                          <p className="text-[14px] text-[#0f172b] whitespace-pre-wrap">{String(v) || <span className="text-[#90a1b9] italic">—</span>}</p>
+              {/* Report data fields */}
+              {detail.data && typeof detail.data === 'object' && (() => {
+                const d = detail.data
+                // Collect simple string/number fields (skip nested objects/arrays except photos)
+                const simpleEntries = Object.entries(d).filter(([k, v]) =>
+                  k !== 'photos' && k !== 'snapshot' && k !== 'id' &&
+                  k !== 'submitted_by' && k !== 'created_at' &&
+                  (typeof v === 'string' || typeof v === 'number') && v !== ''
+                )
+                // Photos
+                const photos = d.photos && typeof d.photos === 'object' ? d.photos : null
+                // Snapshot fields (site info)
+                const snapshot = d.snapshot && typeof d.snapshot === 'object' ? d.snapshot : null
+
+                return (
+                  <div className="flex flex-col gap-4">
+                    {/* Simple report fields */}
+                    {simpleEntries.length > 0 && (
+                      <div>
+                        <h4 className="text-[#0f172b] font-bold text-[14px] mb-3">Report Details</h4>
+                        <div className="flex flex-col gap-2">
+                          {simpleEntries.map(([k, v]) => (
+                            <div key={k} className="flex items-start gap-3 py-2 border-b border-[#f1f5f9] last:border-b-0">
+                              <p className="text-[12px] font-semibold text-[#90a1b9] uppercase tracking-[0.4px] w-[140px] shrink-0 pt-0.5">{k.replace(/_/g, ' ')}</p>
+                              <p className="text-[13px] text-[#0f172b]">{String(v)}</p>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    ))}
+                    )}
+
+                    {/* Site snapshot */}
+                    {snapshot && (
+                      <div>
+                        <h4 className="text-[#0f172b] font-bold text-[14px] mb-2">Site Information</h4>
+                        <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] p-3 flex flex-col gap-1.5">
+                          {Object.entries(snapshot)
+                            .filter(([, v]) => v && String(v).trim() !== '')
+                            .map(([k, v]) => (
+                              <div key={k} className="flex items-start gap-2">
+                                <span className="text-[11px] font-semibold text-[#90a1b9] uppercase tracking-[0.4px] w-[120px] shrink-0 pt-0.5">{k.replace(/_/g, ' ')}</span>
+                                <span className="text-[12px] text-[#45556c]">{String(v)}</span>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Photos */}
+                    {photos && Object.keys(photos).length > 0 && (
+                      <div>
+                        <h4 className="text-[#0f172b] font-bold text-[14px] mb-2">Photos</h4>
+                        <div className="flex flex-col gap-3">
+                          {Object.entries(photos).map(([category, photoList]) => (
+                            Array.isArray(photoList) && photoList.length > 0 && (
+                              <div key={category}>
+                                <p className="text-[11px] font-semibold text-[#90a1b9] uppercase tracking-[0.4px] mb-2">{category.replace(/_/g, ' ')}</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {photoList.map(photo => (
+                                    <a key={photo.id} href={photo.url} target="_blank" rel="noopener noreferrer"
+                                      className="block w-[100px] h-[80px] rounded-[8px] overflow-hidden border border-[#e2e8f0] hover:border-[#f54900]/50 transition-colors">
+                                      <img src={photo.url} alt={category} className="w-full h-full object-cover" />
+                                    </a>
+                                  ))}
+                                </div>
+                              </div>
+                            )
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                )
+              })()}
 
             </div>
           )}
@@ -121,12 +214,13 @@ export default function ReportsTab({ job }) {
   const [activeReport, setActiveReport] = useState(null)
 
   useEffect(() => {
-    apiFetch(`jobs/${job.id}/reports/`).then(({ data, ok }) => {
-      if (ok && data) setReports(data.results ?? data ?? [])
-      else setReports(job.reports ?? [])
-      setLoading(false)
-    })
-  }, [job.id])
+    // Use reports embedded in the job detail response directly.
+    // job.reports contains the correct job_report_id field from GET /api/jobs/{id}/
+    // The separate /api/jobs/{id}/reports/ endpoint can return differently-shaped objects
+    // (missing job_report_id), so we skip it and use the embedded data.
+    setReports(job.reports ?? [])
+    setLoading(false)
+  }, [job.id, job.reports])
 
   return (
     <>
