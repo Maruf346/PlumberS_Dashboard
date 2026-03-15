@@ -258,7 +258,7 @@ export default function StaffProfilePage() {
               <IconArrowLeft />
             </button>
             <div>
-              <h1 className="text-[#0f172b] font-bold text-[22px] leading-[28px]">Staff Profile</h1>
+              <h1 className="text-[#0f172b] font-bold text-[22px] leading-[28px]">Employee Profile</h1>
               {/* ID commented out: <p className="font-['Consolas',monospace] text-[#f54900] text-[13px]">{member.id}</p> */}
               <p className="text-[#62748e] text-[13px] mt-0.5">{member.full_name}</p>
             </div>
