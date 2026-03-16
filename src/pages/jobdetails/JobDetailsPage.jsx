@@ -15,6 +15,7 @@ import JobTabNav              from '@/components/jobdetails/JobTabNav'
 import LineItemsTab           from '@/components/jobdetails/LineItemsTab'
 import SafetyFormsTab         from '@/components/jobdetails/SafetyFormsTab'
 import ReportsTab             from '@/components/jobdetails/ReportsTab'
+import NotesTab              from '@/components/jobdetails/NotesTab'
 import DeleteJobModal         from '@/components/editjob/DeleteJobModal'
 import EditJobDrawer          from '@/pages/editjob/EditJobDrawer'
 
@@ -138,6 +139,7 @@ export default function JobDetailsPage() {
               {activeTab === 'lineitems'   && <LineItemsTab   job={job} onJobUpdate={fetchJob} />}
               {activeTab === 'safetyforms' && <SafetyFormsTab job={job} />}
               {activeTab === 'reports'     && <ReportsTab     job={job} />}
+              {activeTab === 'notes'       && <NotesTab       job={job} />}
             </div>
           </div>
         </div>

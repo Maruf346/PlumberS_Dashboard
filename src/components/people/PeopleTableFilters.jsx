@@ -59,28 +59,15 @@ export default function PeopleTableFilters({
         />
       </div>
 
-      {/* Status */}
+      {/* Status dropdown removed — Active/Inactive tabs above handle this filter.
+           The dropdown was broken (values 'Active'/'Inactive' didn't match API's 'true'/'false').
       <div className="relative">
-        <select
-          value={status}
-          onChange={e => onStatusChange(e.target.value)}
-          className={[
-            'h-[38px] appearance-none bg-white border border-[#e2e8f0] rounded-[8px]',
-            'pl-3 pr-8 text-[13px] leading-[20px] transition-colors cursor-pointer',
-            'focus:outline-none focus:ring-2 focus:ring-[#f54900]/20 focus:border-[#f54900]/50',
-            'w-full sm:w-auto',
-            status ? 'text-[#0f172b]' : 'text-[#90a1b9]',
-          ].join(' ')}
-        >
+        <select value={status} onChange={e => onStatusChange(e.target.value)} ...>
           <option value="">All Statuses</option>
-          {STATUS_OPTIONS.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
+          {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
-        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
-          <IconChevronDown />
-        </span>
       </div>
+      */}
 
       {/* Clear */}
       {hasActiveFilters && (
