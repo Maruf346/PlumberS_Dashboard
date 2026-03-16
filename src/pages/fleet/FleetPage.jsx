@@ -45,6 +45,14 @@ function IconAlertTriangle() {
     </svg>
   )
 }
+function IconDownload() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+      <path d="M7.5 2v8M4.5 7.5l3 3 3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M2 11.5v.5A1.5 1.5 0 003.5 13.5h8A1.5 1.5 0 0013 12v-.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+    </svg>
+  )
+}
 function IconFilter() {
   return (
     <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
@@ -188,6 +196,58 @@ function DeleteVehicleModal({ vehicle, onConfirm, onCancel, loading }) {
         </div>
       </div>
     </div>
+  )
+}
+
+// ── Download Fleet Report CSV ─────────────────────────────────────────────────
+function DownloadReportButton() {
+  const [downloading, setDownloading] = useState(false)
+
+  const handleDownload = async () => {
+    setDownloading(true)
+    try {
+      const token = sessionStorage.getItem('access')
+      const base  = (import.meta.env.VITE_API_BASE_URL ?? '/api/').replace(/\/$/, '')
+      const url   = `${base}/fleet/report/download/`
+
+      const res = await fetch(url, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      })
+
+      if (!res.ok) { setDownloading(false); return }
+
+      const blob = await res.blob()
+
+      // Try to get filename from Content-Disposition, fall back to dated default
+      const disposition = res.headers.get('Content-Disposition') ?? ''
+      const match = disposition.match(/filename[^;=\n]*=["']?([^"';\n]+)/)
+      const date = new Date().toISOString().slice(0, 10)
+      const filename = match?.[1]?.trim() || `fleet-report-${date}.csv`
+
+      const objectUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href     = objectUrl
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(objectUrl)
+    } catch (_) {}
+    setDownloading(false)
+  }
+
+  return (
+    <button
+      onClick={handleDownload}
+      disabled={downloading}
+      className="flex items-center gap-2 h-[38px] px-4 rounded-[10px] border border-[#e2e8f0] bg-white hover:bg-[#f8fafc] text-[#314158] text-[14px] font-medium transition-colors disabled:opacity-60 whitespace-nowrap"
+    >
+      {downloading ? (
+        <><div className="w-3.5 h-3.5 rounded-full border-2 border-[#314158]/30 border-t-[#314158] animate-spin"/>Downloading…</>
+      ) : (
+        <><IconDownload />Download CSV</>
+      )}
+    </button>
   )
 }
 
@@ -387,6 +447,7 @@ export default function FleetPage() {
             </div>
             <div className="flex items-center gap-3 shrink-0">
               <FilterStatusDropdown value={status} onChange={setStatus} />
+              <DownloadReportButton />
               <button onClick={openAdd}
                 className="flex items-center gap-2 h-[38px] px-4 rounded-[10px] bg-[#0f172b] hover:bg-[#1d293d] text-white text-[14px] font-semibold transition-colors shadow-[0px_1px_3px_rgba(15,23,43,0.25)] whitespace-nowrap">
                 <IconVehicleSmall />
