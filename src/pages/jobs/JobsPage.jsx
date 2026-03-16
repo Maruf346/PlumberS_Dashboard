@@ -101,7 +101,7 @@ export default function JobsPage() {
   const [jobs,         setJobs]         = useState([])
   const [totalCount,   setTotalCount]   = useState(0)
   const [dashStats,    setDashStats]    = useState(null)
-  const [managers,     setManagers]     = useState([])
+  // const [managers, setManagers] = useState([]) // Manager filter commented out — see JobsListFilters
   const [loading,      setLoading]      = useState(true)
 
   // ── Tab counts from dashboard ──────────────────────────────────────────────
@@ -119,11 +119,11 @@ export default function JobsPage() {
     if (ok && data) setDashStats(data)
   }, [])
 
-  // ── Fetch manager list for filter ─────────────────────────────────────────
+  // ── Fetch manager list for filter (commented out — backend filter mismatch) ──
   useEffect(() => {
-    apiFetch('user/admin/managerlist/').then(({ data, ok }) => {
-      if (ok && data) setManagers((data.results ?? []).map(m => ({ value: m.id, label: m.full_name })))
-    })
+    // apiFetch('user/admin/managerlist/').then(({ data, ok }) => {
+    //   if (ok && data) setManagers((data.results ?? []).map(m => ({ value: m.id, label: m.full_name })))
+    // })
     fetchStats()
   }, [fetchStats])
 
@@ -133,8 +133,8 @@ export default function JobsPage() {
     const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) })
     if (search)     params.set('search',      search)
     if (status)     params.set('status',      status)
-    if (manager)    params.set('assigned_to', manager)
-    if (dateFilter) params.set('date',        dateFilter)
+    // if (manager) params.set('assigned_to', manager) // Manager filter disabled — backend mismatch
+    // if (dateFilter) params.set('date', dateFilter) // Date filter disabled — backend expects YYYY-MM-DD, not range keywords
     const { data, ok } = await apiFetch(`jobs/?${params}`)
     if (ok && data) {
       setJobs(data.results ?? [])
@@ -247,7 +247,7 @@ export default function JobsPage() {
               status={status}       onStatusChange={v => setParam('status', v)}
               manager={manager}     onManagerChange={v => setParam('manager', v)}
               dateFilter={dateFilter} onDateChange={v => setParam('date', v)}
-              managerOptions={managers}
+              managerOptions={[]}
               hasActiveFilters={hasActiveFilters}
               onClearFilters={clearFilters}
             />

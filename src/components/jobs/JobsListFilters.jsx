@@ -55,8 +55,13 @@ export default function JobsListFilters({
       </div>
 
       <FilterSelect value={status}     onChange={onStatusChange}  options={STATUS_OPTS}    placeholder="Status"  />
+      {/* Manager filter — commented out: backend assigned_to param filters by employee UUID, not manager UUID
       <FilterSelect value={manager}    onChange={onManagerChange} options={managerOptions} placeholder="Manager" />
-      <FilterSelect value={dateFilter} onChange={onDateChange}    options={DATE_OPTS}      placeholder="Date" icon={IconCalendar} />
+      */}
+      {/* Date filter commented out — backend 'date' param expects YYYY-MM-DD (single day), not range keywords like 'this-week'.
+           Re-enable when backend supports date range params (e.g. scheduled_date_after / scheduled_date_before).
+      <FilterSelect value={dateFilter} onChange={onDateChange} options={DATE_OPTS} placeholder="Date" icon={IconCalendar} />
+      */}
 
       {hasActiveFilters && (
         <button onClick={onClearFilters}
