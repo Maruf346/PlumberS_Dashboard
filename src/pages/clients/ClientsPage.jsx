@@ -133,22 +133,17 @@ export default function ClientsPage() {
 
   useEffect(() => { fetchClients() }, [fetchClients])
 
-  // ── Tab counts (derived from total + active filter) ───────────────────────
-  // We only have the current page's data, so show total for current filter
-  // and omit individual counts for inactive tabs (would need separate calls)
+  // ── Tab counts ─────────────────────────────────────────────────────────────
   const tabCounts = { '': totalCount }
 
   // ── Add client ─────────────────────────────────────────────────────────────
-  const handleSave = async (formData) => {
-    // AddEditClientDrawer calls this after a successful API call
-    // Just re-fetch to get fresh server data
+  const handleSave = async () => {
     await fetchClients()
   }
 
   // ── Toggle active/inactive (PATCH) ────────────────────────────────────────
   const handleToggleStatus = async (client) => {
     const newActive = !client.is_active
-    // Optimistic update
     setClients(prev => prev.map(c => c.id === client.id ? { ...c, is_active: newActive } : c))
 
     const { ok } = await apiFetch(`clients/${client.id}/`, {
@@ -156,7 +151,6 @@ export default function ClientsPage() {
       body:   JSON.stringify({ is_active: newActive }),
     })
     if (!ok) {
-      // Revert on failure
       setClients(prev => prev.map(c => c.id === client.id ? { ...c, is_active: client.is_active } : c))
     }
   }
@@ -208,25 +202,26 @@ export default function ClientsPage() {
             </button>
           </div>
 
-          {/* Status tabs */}
-          <div className="flex items-center gap-1 border-b border-[#e2e8f0]">
-            {STATUS_TABS.map(tab => (
-              <button key={tab.value}
-                onClick={() => setParam('status', tab.value)}
-                className={[
-                  'px-4 py-2.5 text-[14px] font-medium transition-colors relative whitespace-nowrap',
-                  isActive === tab.value
-                    ? 'text-[#f54900] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#f54900] after:rounded-t'
-                    : 'text-[#62748e] hover:text-[#314158]',
-                ].join(' ')}>
-                {tab.label}
-                {tab.value === '' && totalCount > 0 && (
-                  <span className="ml-1.5 px-1.5 py-0.5 bg-[#f1f5f9] text-[#62748e] text-[11px] font-bold rounded-full">
-                    {totalCount}
-                  </span>
-                )}
-              </button>
-            ))}
+          {/* ── Status tabs — pill style matching ManagersPage / StaffPage ── */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {STATUS_TABS.map(tab => {
+              const active = isActive === tab.value
+              return (
+                <button key={tab.value} onClick={() => setParam('status', tab.value)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-[8px] text-[13px] font-medium transition-colors ${
+                    active ? 'bg-[#0f172b] text-white' : 'bg-white border border-[#e2e8f0] text-[#62748e] hover:bg-[#f8fafc]'
+                  }`}>
+                  {tab.label}
+                  {tab.value === '' && totalCount > 0 && (
+                    <span className={`inline-flex items-center justify-center rounded-full min-w-[20px] h-5 px-1.5 text-[11px] font-bold leading-none ${
+                      active ? 'bg-white/20 text-white' : 'bg-[#f1f5f9] text-[#62748e]'
+                    }`}>
+                      {totalCount}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
           </div>
 
           {/* Filters */}
