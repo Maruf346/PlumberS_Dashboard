@@ -10,7 +10,7 @@ const TABS = [
   { id: 'lineitems',   label: 'Line Items',   Icon: IconClipboard },
   { id: 'safetyforms', label: 'Safety Forms', Icon: IconShield    },
   { id: 'reports',     label: 'Reports',      Icon: IconFileText  },
-  { id: 'notes',       label: 'Notes',        Icon: IconChat      },
+  // { id: 'notes',       label: 'Notes',        Icon: IconChat      },
 ]
 
 export default function JobTabNav({ activeTab, onTabChange, unreadNotes }) {
