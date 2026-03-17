@@ -192,14 +192,36 @@ export default function SchedulePage() {
   const [pendingDrop, setPendingDrop] = useState(null) // { job, date }
   const [modalSaving, setModalSaving] = useState(false)
 
-  // ── Fetch all jobs from API ────────────────────────────────────────────────
+  // ── Fetch ALL jobs — loop every page until next is null ─────────────────────
+  // Backend paginates at 5 per page by default. We collect all pages so the
+  // calendar shows every job regardless of total count.
   const fetchJobs = useCallback(async () => {
     setLoading(true)
-    // Fetch all jobs — no pagination limit needed for calendar view
-    const { data, ok } = await apiFetch('jobs/?page_size=500')
-    if (ok && data) {
-      setJobs((data.results ?? []).map(mapJob))
+    let allResults = []
+    let endpoint = 'jobs/?page_size=100' // request large pages to minimise round-trips
+
+    while (endpoint) {
+      let result
+      if (endpoint.startsWith('http')) {
+        // 'next' from API is a full URL — fetch it directly with auth header
+        const token = sessionStorage.getItem('access')
+        try {
+          const res = await fetch(endpoint, {
+            headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          })
+          const data = res.ok ? await res.json() : null
+          result = { data, ok: res.ok }
+        } catch (_) { break }
+      } else {
+        result = await apiFetch(endpoint)
+      }
+
+      if (!result.ok || !result.data) break
+      allResults = allResults.concat(result.data.results ?? [])
+      endpoint = result.data.next ?? null  // null when last page reached
     }
+
+    setJobs(allResults.map(mapJob))
     setLoading(false)
   }, [])
 
@@ -403,7 +425,7 @@ export default function SchedulePage() {
 
             <div className="flex items-center gap-3 shrink-0">
               {/* Month/Week/Day toggle */}
-              {/* <div className="flex items-center bg-white border border-[#e2e8f0] rounded-[10px] p-[3px]">
+              <div className="flex items-center bg-white border border-[#e2e8f0] rounded-[10px] p-[3px]">
                 {['month','week','day'].map(mode => (
                   <button key={mode} onClick={() => setViewMode(mode)}
                     className={`px-4 py-[6px] rounded-[7px] text-[13px] font-semibold capitalize transition-all ${
@@ -414,7 +436,7 @@ export default function SchedulePage() {
                     {mode.charAt(0).toUpperCase() + mode.slice(1)}
                   </button>
                 ))}
-              </div> */}
+              </div>
 
               {/* Month navigation */}
               <div className="flex items-center gap-1 bg-white border border-[#e2e8f0] rounded-[10px] px-2 py-[5px]">
