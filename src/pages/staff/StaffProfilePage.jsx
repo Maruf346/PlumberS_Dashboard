@@ -2,12 +2,12 @@
 // GET  /api/user/admin/users/{id}/          → load detail
 // POST /api/user/admin/users/{id}/block/    → toggle active
 // DELETE /api/user/admin/users/{id}/        → delete
-//
-// Sections: Profile hero | Employee Details | Emergency Contact |
-//           Assigned Jobs | Certificates (with popup + download)
+// GET  /api/user/{id}/assign-vehicle/       → get assigned vehicle
+// PATCH /api/user/{id}/assign-vehicle/      → { assigned_vehicle_id: uuid | null }
+// GET  /api/fleet/                          → vehicle list for dropdown
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useEffect }              from 'react'
+import { useState, useEffect, useRef }      from 'react'
 import { useParams, useNavigate, Link }     from 'react-router-dom'
 
 import PersonAvatar      from '@/components/shared/PersonAvatar'
@@ -30,6 +30,11 @@ function IconChev()       { return <svg width="14" height="14" viewBox="0 0 14 1
 function IconClose()      { return <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="#314158" strokeWidth="1.5" strokeLinecap="round"/></svg> }
 function IconDownload()   { return <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 2v8M4.5 7.5l3 3 3-3" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 12h11" stroke="white" strokeWidth="1.3" strokeLinecap="round"/></svg> }
 function IconExternal()   { return <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M5 2H2v9h9V8M7 2h4v4M11 2L6 7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg> }
+function IconTruck()      { return <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M1 5h10v9H1z" stroke="#62748e" strokeWidth="1.2" strokeLinejoin="round"/><path d="M11 8l4 2.5V14h-4z" stroke="#62748e" strokeWidth="1.2" strokeLinejoin="round"/><circle cx="4" cy="14.5" r="1.5" fill="#62748e"/><circle cx="13" cy="14.5" r="1.5" fill="#62748e"/></svg> }
+function IconEdit()       { return <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9.5 2l2.5 2.5-7 7H2.5V9l7-7z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/></svg> }
+function IconUnlink()     { return <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 9l4-4M3.5 7.5L2 9a2.828 2.828 0 004 4l1.5-1.5M10.5 6.5L12 5a2.828 2.828 0 00-4-4L6.5 2.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M2 2l10 10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg> }
+function IconChevDown()   { return <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg> }
+function IconSearch()     { return <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="#90a1b9" strokeWidth="1.1"/><path d="M9 9l3 3" stroke="#90a1b9" strokeWidth="1.1" strokeLinecap="round"/></svg> }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const AVATAR_COLORS = ['#3b82f6','#8b5cf6','#f59e0b','#10b981','#ef4444','#06b6d4','#f54900']
@@ -47,6 +52,14 @@ function getInitials(name) {
 function fmtDate(iso) {
   if (!iso) return null
   return new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+// ── Vehicle status colour ─────────────────────────────────────────────────────
+const VEHICLE_STATUS = {
+  healthy:          { dot: 'bg-[#22c55e]', label: 'Healthy',          text: 'text-[#007a55]' },
+  inspection_due:   { dot: 'bg-[#fe9a00]', label: 'Inspection Due',   text: 'text-[#c73b00]' },
+  issue_reported:   { dot: 'bg-[#c10007]', label: 'Issue Reported',   text: 'text-[#c10007]' },
+  service_overdue:  { dot: 'bg-[#ef4444]', label: 'Service Overdue',  text: 'text-[#c10007]' },
 }
 
 // ── Job status badge ──────────────────────────────────────────────────────────
@@ -72,8 +85,6 @@ function CertModal({ cert, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0f172b]/40" onClick={onClose}>
       <div className="bg-white rounded-[16px] shadow-[0_8px_40px_rgba(15,23,43,0.18)] w-full max-w-[480px] overflow-hidden"
         onClick={e => e.stopPropagation()}>
-
-        {/* Modal header */}
         <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-[#f1f5f9]">
           <div>
             <h3 className="text-[#0f172b] font-bold text-[17px] leading-[24px]">{cert.name}</h3>
@@ -86,14 +97,10 @@ function CertModal({ cert, onClose }) {
             <IconClose />
           </button>
         </div>
-
-        {/* Body */}
         <div className="px-6 py-5 flex flex-col gap-4">
-
           {cert.description && (
             <p className="text-[#314158] text-[14px] leading-[22px]">{cert.description}</p>
           )}
-
           <div className="grid grid-cols-2 gap-3">
             {cert.issue_date && (
               <div className="bg-[#f8fafc] rounded-[8px] px-4 py-3">
@@ -108,8 +115,6 @@ function CertModal({ cert, onClose }) {
               </div>
             )}
           </div>
-
-          {/* Certificate file / media */}
           {cert.media && (
             <div className="flex items-center gap-3 p-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px]">
               <div className="w-8 h-8 rounded-[6px] bg-[#fff3ee] border border-[#ffd5c2] flex items-center justify-center shrink-0">
@@ -160,6 +165,312 @@ function Spinner() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ── Vehicle Assignment Card ───────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+function VehicleAssignCard({ staffId }) {
+  const [vehicle,       setVehicle]       = useState(undefined) // undefined = loading, null = none
+  const [loadingVeh,    setLoadingVeh]    = useState(true)
+  const [editing,       setEditing]       = useState(false)
+  const [vehicles,      setVehicles]      = useState([])
+  const [loadingList,   setLoadingList]   = useState(false)
+  const [search,        setSearch]        = useState('')
+  const [selectedId,    setSelectedId]    = useState(null)
+  const [saving,        setSaving]        = useState(false)
+  const [error,         setError]         = useState('')
+  const dropdownRef = useRef(null)
+
+  // ── Fetch currently assigned vehicle ───────────────────────────────────────
+  useEffect(() => {
+    setLoadingVeh(true)
+    apiFetch(`user/${staffId}/assign-vehicle/`).then(({ data, ok }) => {
+      setVehicle(ok && data?.assigned_vehicle ? data.assigned_vehicle : null)
+      setLoadingVeh(false)
+    })
+  }, [staffId])
+
+  // ── Fetch vehicle list when edit mode opens ────────────────────────────────
+  useEffect(() => {
+    if (!editing) return
+    setLoadingList(true)
+    apiFetch('fleet/?page_size=100').then(({ data, ok }) => {
+      if (ok && data) setVehicles(data.results ?? [])
+      setLoadingList(false)
+    })
+    // Pre-select current vehicle
+    setSelectedId(vehicle?.id ?? null)
+    setSearch('')
+    setError('')
+  }, [editing, vehicle?.id])
+
+  // ── Close dropdown on outside click ────────────────────────────────────────
+  useEffect(() => {
+    if (!editing) return
+    const h = e => { if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setEditing(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [editing])
+
+  // ── Save assignment ────────────────────────────────────────────────────────
+  const handleSave = async (vehicleId) => {
+    setSaving(true)
+    setError('')
+    const { data, ok } = await apiFetch(`user/${staffId}/assign-vehicle/`, {
+      method: 'PATCH',
+      body: JSON.stringify({ assigned_vehicle_id: vehicleId ?? null }),
+    })
+    if (ok) {
+      setVehicle(vehicleId && data?.assigned_vehicle ? data.assigned_vehicle
+        : vehicles.find(v => v.id === vehicleId) ?? null)
+      setEditing(false)
+    } else {
+      setError('Failed to update. Please try again.')
+    }
+    setSaving(false)
+  }
+
+  const handleUnassign = () => handleSave(null)
+
+  const filtered = vehicles.filter(v =>
+    !search.trim() ||
+    v.name?.toLowerCase().includes(search.toLowerCase()) ||
+    v.plate?.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const statusStyle = vehicle ? (VEHICLE_STATUS[vehicle.status] ?? { dot: 'bg-[#cad5e2]', label: vehicle.status, text: 'text-[#62748e]' }) : null
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  return (
+    <div className="bg-white border border-[#e2e8f0] rounded-[14px] overflow-hidden shadow-[0px_1px_3px_rgba(0,0,0,0.08)]">
+
+      {/* Card header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-[#f1f5f9]">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-[6px] bg-[#f8fafc] border border-[#e2e8f0] flex items-center justify-center">
+            <IconTruck />
+          </div>
+          <div>
+            <h3 className="text-[#1d293d] font-bold text-[15px] leading-[22px]">Assigned Vehicle</h3>
+            <p className="text-[#90a1b9] text-[12px]">
+              {loadingVeh ? 'Loading…' : vehicle ? `${vehicle.name} · ${vehicle.plate}` : 'No vehicle assigned'}
+            </p>
+          </div>
+        </div>
+
+        {/* Action buttons */}
+        {!loadingVeh && (
+          <div className="flex items-center gap-2">
+            {vehicle && !editing && (
+              <button onClick={handleUnassign} disabled={saving}
+                className="flex items-center gap-1.5 px-3 py-[6px] rounded-[8px] border border-[#e2e8f0] bg-white hover:bg-[#fef2f2] hover:border-[#fecaca] text-[#c10007] text-[12px] font-medium transition-colors disabled:opacity-50">
+                <IconUnlink /> Unassign
+              </button>
+            )}
+            {!editing && (
+              <button onClick={() => setEditing(true)}
+                className="flex items-center gap-1.5 px-3 py-[6px] rounded-[8px] border border-[#e2e8f0] bg-white hover:bg-[#f8fafc] text-[#314158] text-[12px] font-medium transition-colors">
+                <IconEdit /> {vehicle ? 'Change' : 'Assign Vehicle'}
+              </button>
+            )}
+            {editing && (
+              <button onClick={() => setEditing(false)}
+                className="flex items-center justify-center w-7 h-7 rounded-[6px] border border-[#e2e8f0] bg-white hover:bg-[#f8fafc] text-[#90a1b9] transition-colors">
+                <IconClose />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Vehicle details when assigned */}
+      {!loadingVeh && vehicle && !editing && (
+        <div className="px-6 py-5">
+          <div className="flex items-start gap-4 flex-wrap">
+
+            {/* Vehicle image or placeholder */}
+            {vehicle.picture ? (
+              <img src={vehicle.picture} alt={vehicle.name}
+                className="w-[100px] h-[72px] rounded-[10px] object-cover border border-[#e2e8f0] shrink-0" />
+            ) : (
+              <div className="w-[100px] h-[72px] rounded-[10px] bg-[#f8fafc] border border-[#e2e8f0] flex items-center justify-center shrink-0">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                  <path d="M3 12h20v10H3z" stroke="#cad5e2" strokeWidth="1.5" strokeLinejoin="round"/>
+                  <path d="M3 12l3-7h14l3 7" stroke="#cad5e2" strokeWidth="1.5" strokeLinejoin="round"/>
+                  <path d="M23 12l7 4v6h-7z" stroke="#cad5e2" strokeWidth="1.5" strokeLinejoin="round"/>
+                  <circle cx="8" cy="22" r="3" stroke="#cad5e2" strokeWidth="1.5"/>
+                  <circle cx="20" cy="22" r="3" stroke="#cad5e2" strokeWidth="1.5"/>
+                  <circle cx="28" cy="22" r="3" stroke="#cad5e2" strokeWidth="1.5"/>
+                </svg>
+              </div>
+            )}
+
+            {/* Vehicle info */}
+            <div className="flex-1 min-w-[180px]">
+              <div className="flex items-center gap-2 flex-wrap mb-2">
+                <p className="text-[#0f172b] font-bold text-[16px]">{vehicle.name}</p>
+                {statusStyle && (
+                  <span className={`flex items-center gap-1.5 text-[12px] font-semibold ${statusStyle.text}`}>
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${statusStyle.dot}`}/>
+                    {statusStyle.label}
+                  </span>
+                )}
+              </div>
+              <p className="font-['Consolas',monospace] text-[#f54900] text-[13px] font-bold mb-3">{vehicle.plate}</p>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2">
+                {vehicle.make && (
+                  <div>
+                    <p className="text-[11px] font-bold text-[#90a1b9] uppercase tracking-[0.4px]">Make</p>
+                    <p className="text-[13px] text-[#314158] mt-0.5">{vehicle.make}</p>
+                  </div>
+                )}
+                {vehicle.model_name && (
+                  <div>
+                    <p className="text-[11px] font-bold text-[#90a1b9] uppercase tracking-[0.4px]">Model</p>
+                    <p className="text-[13px] text-[#314158] mt-0.5">{vehicle.model_name}</p>
+                  </div>
+                )}
+                {vehicle.year && (
+                  <div>
+                    <p className="text-[11px] font-bold text-[#90a1b9] uppercase tracking-[0.4px]">Year</p>
+                    <p className="text-[13px] text-[#314158] mt-0.5">{vehicle.year}</p>
+                  </div>
+                )}
+                {vehicle.current_odometer_km != null && (
+                  <div>
+                    <p className="text-[11px] font-bold text-[#90a1b9] uppercase tracking-[0.4px]">Odometer</p>
+                    <p className="text-[13px] text-[#314158] mt-0.5">{vehicle.current_odometer_km.toLocaleString()} km</p>
+                  </div>
+                )}
+                {vehicle.km_until_service != null && (
+                  <div>
+                    <p className="text-[11px] font-bold text-[#90a1b9] uppercase tracking-[0.4px]">Next Service</p>
+                    <p className="text-[13px] text-[#314158] mt-0.5">{vehicle.km_until_service} km</p>
+                  </div>
+                )}
+                {vehicle.last_inspection_date && (
+                  <div>
+                    <p className="text-[11px] font-bold text-[#90a1b9] uppercase tracking-[0.4px]">Last Inspection</p>
+                    <p className="text-[13px] text-[#314158] mt-0.5">{fmtDate(vehicle.last_inspection_date)}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Empty state — no vehicle assigned */}
+      {!loadingVeh && !vehicle && !editing && (
+        <div className="px-6 py-8 flex flex-col items-center gap-3 text-center">
+          <div className="w-12 h-12 rounded-full bg-[#f8fafc] border border-[#e2e8f0] flex items-center justify-center">
+            <IconTruck />
+          </div>
+          <div>
+            <p className="text-[#314158] font-semibold text-[14px]">No vehicle assigned</p>
+            <p className="text-[#90a1b9] text-[13px] mt-0.5">Click "Assign Vehicle" to assign one</p>
+          </div>
+        </div>
+      )}
+
+      {/* Loading skeleton */}
+      {loadingVeh && (
+        <div className="px-6 py-5 flex gap-4">
+          <div className="w-[100px] h-[72px] rounded-[10px] bg-[#f1f5f9] animate-pulse shrink-0" />
+          <div className="flex-1 flex flex-col gap-2 pt-2">
+            <div className="h-4 bg-[#f1f5f9] rounded animate-pulse w-1/3" />
+            <div className="h-3 bg-[#f1f5f9] rounded animate-pulse w-1/4" />
+            <div className="h-3 bg-[#f1f5f9] rounded animate-pulse w-1/2 mt-2" />
+          </div>
+        </div>
+      )}
+
+      {/* Assign/change vehicle dropdown */}
+      {editing && (
+        <div className="px-6 py-4 border-t border-[#f1f5f9]" ref={dropdownRef}>
+          <p className="text-[13px] font-semibold text-[#0f172b] mb-3">
+            {vehicle ? 'Change assigned vehicle' : 'Choose a vehicle to assign'}
+          </p>
+
+          {/* Search */}
+          <div className="relative mb-3">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><IconSearch /></span>
+            <input
+              type="text"
+              placeholder="Search by name or plate…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full h-[36px] border border-[#e2e8f0] rounded-[8px] pl-8 pr-3 text-[13px] text-[#0f172b] placeholder:text-[#90a1b9] focus:outline-none focus:ring-2 focus:ring-[#f54900]/20 focus:border-[#f54900]/40 transition-colors"
+            />
+          </div>
+
+          {/* Vehicle list */}
+          <div className="flex flex-col gap-1.5 max-h-[240px] overflow-y-auto mb-3">
+            {loadingList ? (
+              <div className="flex justify-center py-6">
+                <div className="w-5 h-5 rounded-full border-2 border-[#e2e8f0] border-t-[#f54900] animate-spin"/>
+              </div>
+            ) : filtered.length === 0 ? (
+              <p className="text-center text-[#90a1b9] text-[13px] py-4">No vehicles found.</p>
+            ) : filtered.map(v => {
+              const st = VEHICLE_STATUS[v.status] ?? { dot: 'bg-[#cad5e2]', label: v.status }
+              const isSelected = selectedId === v.id
+              return (
+                <button key={v.id} type="button"
+                  onClick={() => setSelectedId(isSelected ? null : v.id)}
+                  className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-[8px] border text-left transition-colors ${
+                    isSelected
+                      ? 'border-[#f54900]/40 bg-[#fff7f5]'
+                      : 'border-[#e2e8f0] bg-white hover:bg-[#f8fafc]'
+                  }`}>
+                  {v.picture ? (
+                    <img src={v.picture} alt={v.name} className="w-10 h-8 rounded-[6px] object-cover shrink-0 border border-[#e2e8f0]"/>
+                  ) : (
+                    <div className="w-10 h-8 rounded-[6px] bg-[#f8fafc] border border-[#e2e8f0] flex items-center justify-center shrink-0">
+                      <IconTruck />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-semibold text-[#0f172b] truncate">{v.name}</p>
+                    <p className="font-['Consolas',monospace] text-[11px] text-[#f54900]">{v.plate}</p>
+                  </div>
+                  <span className={`flex items-center gap-1 text-[11px] font-medium ${st.text ?? 'text-[#62748e]'} shrink-0`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`}/>
+                    {st.label}
+                  </span>
+                  {isSelected && (
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 text-[#f54900]">
+                      <path d="M3 8l3.5 3.5L13 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          {error && <p className="text-[#c10007] text-[12px] mb-2">{error}</p>}
+
+          {/* Confirm / cancel */}
+          <div className="flex items-center justify-end gap-2">
+            <button onClick={() => setEditing(false)} disabled={saving}
+              className="px-4 py-[7px] rounded-[8px] border border-[#e2e8f0] text-[#314158] text-[13px] font-medium hover:bg-[#f8fafc] transition-colors disabled:opacity-40">
+              Cancel
+            </button>
+            <button
+              onClick={() => handleSave(selectedId)}
+              disabled={saving || selectedId === (vehicle?.id ?? null)}
+              className="flex items-center gap-1.5 px-4 py-[7px] rounded-[8px] bg-[#f54900] hover:bg-[#c73b00] text-white text-[13px] font-semibold transition-colors disabled:opacity-40">
+              {saving
+                ? <><div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin"/>Saving…</>
+                : selectedId ? 'Confirm Assignment' : 'Save'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 export default function StaffProfilePage() {
   const { staffId } = useParams()
   const navigate    = useNavigate()
@@ -170,9 +481,8 @@ export default function StaffProfilePage() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting,   setDeleting]   = useState(false)
   const [toggling,   setToggling]   = useState(false)
-  const [activeCert, setActiveCert] = useState(null)  // certificate popup
+  const [activeCert, setActiveCert] = useState(null)
 
-  // ── Load ──────────────────────────────────────────────────────────────────
   const load = async () => {
     setLoading(true)
     const { data, ok, status } = await apiFetch(`user/admin/users/${staffId}/`)
@@ -184,7 +494,6 @@ export default function StaffProfilePage() {
 
   useEffect(() => { load() }, [staffId])
 
-  // ── Toggle block/unblock ──────────────────────────────────────────────────
   const handleToggle = async () => {
     setToggling(true)
     const prev = member.is_active
@@ -194,7 +503,6 @@ export default function StaffProfilePage() {
     setToggling(false)
   }
 
-  // ── Delete ────────────────────────────────────────────────────────────────
   const handleDelete = async () => {
     setDeleting(true)
     const { ok } = await apiFetch(`user/admin/users/${staffId}/`, { method: 'DELETE' })
@@ -228,14 +536,13 @@ export default function StaffProfilePage() {
     )
   }
 
-  const ep   = member.employee_profile ?? {}
-  const jobs = Array.isArray(member.jobs) ? member.jobs : []
-  const certs = Array.isArray(member.certificates) ? member.certificates : []
+  const ep       = member.employee_profile ?? {}
+  const jobs     = Array.isArray(member.jobs) ? member.jobs : []
+  const certs    = Array.isArray(member.certificates) ? member.certificates : []
   const jobCount = typeof member.jobs_count === 'number' ? member.jobs_count : jobs.length
 
   return (
     <>
-      {/* Certificate popup */}
       {activeCert && <CertModal cert={activeCert} onClose={() => setActiveCert(null)} />}
 
       {deleteOpen && (
@@ -250,7 +557,7 @@ export default function StaffProfilePage() {
 
       <div className="p-6 lg:p-8 max-w-[900px] flex flex-col gap-6">
 
-        {/* ── Header — no ID shown ── */}
+        {/* Header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate('/admin/staff')}
@@ -259,7 +566,6 @@ export default function StaffProfilePage() {
             </button>
             <div>
               <h1 className="text-[#0f172b] font-bold text-[22px] leading-[28px]">Employee Profile</h1>
-              {/* ID commented out: <p className="font-['Consolas',monospace] text-[#f54900] text-[13px]">{member.id}</p> */}
               <p className="text-[#62748e] text-[13px] mt-0.5">{member.full_name}</p>
             </div>
           </div>
@@ -275,33 +581,27 @@ export default function StaffProfilePage() {
           </div>
         </div>
 
-        {/* ── Profile card ── */}
+        {/* Profile card */}
         <div className="bg-white border border-[#e2e8f0] rounded-[14px] p-6 shadow-[0px_1px_3px_rgba(0,0,0,0.08)]">
           <div className="flex items-start gap-5 flex-wrap">
-
-            {/* Avatar */}
             {member.profile_picture ? (
               <img src={member.profile_picture} alt={member.full_name}
                 className="w-[72px] h-[72px] rounded-full object-cover border-2 border-[#e2e8f0] shrink-0" />
             ) : (
               <PersonAvatar initials={getInitials(member.full_name)} color={getColor(member.full_name)} size="xl" />
             )}
-
             <div className="flex-1 min-w-[200px]">
               <div className="flex items-center gap-3 flex-wrap">
                 <h2 className="text-[#0f172b] font-bold text-[20px] leading-[28px]">{member.full_name}</h2>
                 <PeopleStatusBadge status={member.is_active ? 'Active' : 'Inactive'} />
               </div>
               <p className="text-[#62748e] text-[14px] mt-1">{member.role || ep.profession || '—'}</p>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                 {[
-                  { icon: IconMail,     val: member.email },
-                  { icon: IconPhone,    val: member.phone },
+                  { icon: IconMail,      val: member.email },
+                  { icon: IconPhone,     val: member.phone },
                   { icon: IconBriefcase, val: member.role || ep.profession },
-                  { icon: IconCalendar, val: member.created_at ? `Joined ${fmtDate(member.created_at)}` : null },
-                  // birth_date available but not shown to preserve layout — can uncomment:
-                  // { icon: IconCalendar, val: member.birth_date ? `Born ${fmtDate(member.birth_date)}` : null },
+                  { icon: IconCalendar,  val: member.created_at ? `Joined ${fmtDate(member.created_at)}` : null },
                 ].filter(r => r.val).map(({ icon: Icon, val }, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <Icon />
@@ -310,8 +610,6 @@ export default function StaffProfilePage() {
                 ))}
               </div>
             </div>
-
-            {/* Stats */}
             <div className="flex gap-3 flex-wrap">
               <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] px-4 py-3 text-center min-w-[80px]">
                 <p className="text-[22px] font-bold text-[#f54900]">{jobCount}</p>
@@ -327,15 +625,15 @@ export default function StaffProfilePage() {
           </div>
         </div>
 
-        {/* ── Employee Profile Details ── */}
+        {/* ── Vehicle Assignment Card — NEW ── */}
+        <VehicleAssignCard staffId={staffId} />
+
+        {/* Employee Profile Details */}
         {Object.keys(ep).length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-            {/* Professional info */}
             <div className="bg-white border border-[#e2e8f0] rounded-[14px] p-6 shadow-[0px_1px_3px_rgba(0,0,0,0.08)]">
               <h3 className="text-[#1d293d] font-bold text-[15px] mb-1">Professional Info</h3>
               <p className="text-[#90a1b9] text-[12px] mb-4">Skills, ID and licence details</p>
-
               {ep.employee_id && (
                 <InfoRow icon={IconId} label="Employee ID">
                   <span className="font-mono text-[13px]">{ep.employee_id}</span>
@@ -347,9 +645,7 @@ export default function StaffProfilePage() {
                 </InfoRow>
               )}
               {ep.profession && (
-                <InfoRow icon={IconBriefcase} label="Profession">
-                  {ep.profession}
-                </InfoRow>
+                <InfoRow icon={IconBriefcase} label="Profession">{ep.profession}</InfoRow>
               )}
               {(ep.drivers_license_number || ep.license_expiry_date) && (
                 <InfoRow icon={IconId} label="Driver's Licence">
@@ -374,12 +670,10 @@ export default function StaffProfilePage() {
               )}
             </div>
 
-            {/* Emergency Contact */}
             {ep.emergency_contact && (
               <div className="bg-white border border-[#e2e8f0] rounded-[14px] p-6 shadow-[0px_1px_3px_rgba(0,0,0,0.08)]">
                 <h3 className="text-[#1d293d] font-bold text-[15px] mb-1">Emergency Contact</h3>
                 <p className="text-[#90a1b9] text-[12px] mb-4">In case of emergency</p>
-
                 {ep.emergency_contact.name && (
                   <InfoRow icon={IconId} label="Name">
                     <span className="font-semibold text-[#0f172b]">{ep.emergency_contact.name}</span>
@@ -402,7 +696,7 @@ export default function StaffProfilePage() {
           </div>
         )}
 
-        {/* ── Assigned Jobs ── */}
+        {/* Assigned Jobs */}
         <div className="bg-white border border-[#e2e8f0] rounded-[14px] overflow-hidden shadow-[0px_1px_3px_rgba(0,0,0,0.08)]">
           <div className="flex items-center justify-between px-6 py-4 border-b border-[#f1f5f9]">
             <div>
@@ -438,13 +732,12 @@ export default function StaffProfilePage() {
           )}
         </div>
 
-        {/* ── Certificates ── */}
+        {/* Certificates */}
         <div className="bg-white border border-[#e2e8f0] rounded-[14px] overflow-hidden shadow-[0px_1px_3px_rgba(0,0,0,0.08)]">
           <div className="px-6 py-4 border-b border-[#f1f5f9]">
             <h3 className="text-[#1d293d] font-bold text-[15px] leading-[22px]">Certificates</h3>
             <p className="text-[#90a1b9] text-[12px] mt-0.5">{certs.length} certificate{certs.length !== 1 ? 's' : ''}</p>
           </div>
-
           {certs.length === 0 ? (
             <div className="py-12 text-center">
               <p className="text-[#90a1b9] text-[14px]">No certificates on record.</p>
