@@ -1,4 +1,7 @@
 // src/components/shared/EnhancedTablePagination.jsx
+// Accepts both pageSizeOptions and pageSizes prop names (either works).
+// Accepts both totalCount and totalResults prop names (either works).
+// Accepts both page and currentPage prop names (either works).
 
 function IconChevronLeft() {
   return (
@@ -37,19 +40,28 @@ function getPageNumbers(current, total) {
 }
 
 export default function EnhancedTablePagination({
+  // Accept either prop name for current page
   page,
-  currentPage = page,          // accept either prop name
+  currentPage,
   totalPages,
+  // Accept either prop name for total results
   totalCount,
-  totalResults = totalCount,   // accept either prop name
+  totalResults,
   pageSize,
-  pageSizeOptions = [5, 10, 15, 20],
+  // Accept either prop name for page size options
+  pageSizeOptions,
+  pageSizes,
   onPageChange,
   onPageSizeChange,
 }) {
-  const start = (currentPage - 1) * pageSize + 1
-  const end   = Math.min(currentPage * pageSize, totalResults)
-  const pages = getPageNumbers(currentPage, totalPages)
+  // Resolve aliased props — whichever is provided
+  const resolvedPage    = currentPage ?? page ?? 1
+  const resolvedTotal   = totalResults ?? totalCount ?? 0
+  const resolvedOptions = pageSizeOptions ?? pageSizes ?? [5, 10, 15, 20]
+
+  const start = totalResults === 0 ? 0 : (resolvedPage - 1) * pageSize + 1
+  const end   = Math.min(resolvedPage * pageSize, resolvedTotal)
+  const pages = getPageNumbers(resolvedPage, totalPages)
 
   const btnBase = 'inline-flex items-center justify-center min-w-[32px] h-8 px-1 rounded-[6px] text-[13px] font-medium transition-colors select-none'
 
@@ -59,8 +71,11 @@ export default function EnhancedTablePagination({
       {/* Results info + page size */}
       <div className="flex items-center gap-3 flex-wrap">
         <p className="text-[#62748e] text-[13px] leading-[20px] whitespace-nowrap">
-          Showing <span className="font-semibold text-[#0f172b]">{start}–{end}</span> of{' '}
-          <span className="font-semibold text-[#0f172b]">{totalResults}</span> jobs
+          {resolvedTotal === 0
+            ? 'No results'
+            : <>Showing <span className="font-semibold text-[#0f172b]">{start}–{end}</span> of{' '}
+              <span className="font-semibold text-[#0f172b]">{resolvedTotal}</span></>
+          }
         </p>
 
         {/* Page size selector */}
@@ -68,10 +83,10 @@ export default function EnhancedTablePagination({
           <span className="text-[#90a1b9] text-[12px]">Per page:</span>
           <select
             value={pageSize}
-            onChange={e => onPageSizeChange(Number(e.target.value))}
+            onChange={e => onPageSizeChange?.(Number(e.target.value))}
             className="h-[28px] bg-white border border-[#e2e8f0] rounded-[6px] px-2 text-[12px] text-[#314158] focus:outline-none focus:ring-1 focus:ring-[#f54900]/30 cursor-pointer"
           >
-            {pageSizeOptions.map(s => (
+            {resolvedOptions.map(s => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
@@ -82,10 +97,10 @@ export default function EnhancedTablePagination({
       <div className="flex items-center gap-1">
         {/* Previous */}
         <button
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
+          onClick={() => onPageChange?.(resolvedPage - 1)}
+          disabled={resolvedPage === 1}
           className={`${btnBase} border border-[#e2e8f0] gap-0.5 px-2 ${
-            currentPage === 1
+            resolvedPage === 1
               ? 'text-[#cad5e2] cursor-not-allowed bg-white'
               : 'text-[#314158] bg-white hover:bg-[#f8fafc] cursor-pointer'
           }`}
@@ -102,9 +117,9 @@ export default function EnhancedTablePagination({
           ) : (
             <button
               key={p}
-              onClick={() => onPageChange(p)}
+              onClick={() => onPageChange?.(p)}
               className={`${btnBase} ${
-                p === currentPage
+                p === resolvedPage
                   ? 'bg-[#0f172b] text-white'
                   : 'text-[#45556c] hover:bg-[#f8fafc] border border-transparent hover:border-[#e2e8f0] cursor-pointer'
               }`}
@@ -116,10 +131,10 @@ export default function EnhancedTablePagination({
 
         {/* Next */}
         <button
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
+          onClick={() => onPageChange?.(resolvedPage + 1)}
+          disabled={resolvedPage === totalPages}
           className={`${btnBase} border border-[#e2e8f0] gap-0.5 px-2 ${
-            currentPage === totalPages
+            resolvedPage === totalPages
               ? 'text-[#cad5e2] cursor-not-allowed bg-white'
               : 'text-[#314158] bg-white hover:bg-[#f8fafc] cursor-pointer'
           }`}

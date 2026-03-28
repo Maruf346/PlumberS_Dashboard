@@ -1,5 +1,5 @@
 // src/pages/staff/StaffPage.jsx
-// GET /api/user/admin/employeelist/?search=&is_active=&page=
+// GET /api/user/admin/employeelist/?search=&is_active=&page=&page_size=
 // DELETE /api/user/admin/users/{id}/
 // POST /api/user/admin/users/{id}/block/  (toggle active/inactive)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -59,7 +59,6 @@ function Spinner() {
   )
 }
 
-// ── Inline action menu — Edit commented out (no endpoint), toggle + delete only
 function StaffActionMenu({ emp, onToggle, onDelete }) {
   const [open, setOpen] = useState(false)
   return (
@@ -76,11 +75,6 @@ function StaffActionMenu({ emp, onToggle, onDelete }) {
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-9 z-20 w-[160px] bg-white border border-[#e2e8f0] rounded-[10px] shadow-[0_4px_16px_rgba(15,23,43,0.12)] py-1 overflow-hidden">
-            {/* Edit — no update endpoint, commented out
-            <button className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-[#314158] hover:bg-[#f8fafc]">
-              Edit
-            </button>
-            <div className="h-px bg-[#f1f5f9] mx-2"/> */}
             <button onClick={e => { e.stopPropagation(); setOpen(false); onToggle() }}
               className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-[#314158] hover:bg-[#f8fafc] transition-colors">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7c0-2.761 2.239-5 5-5s5 2.239 5 5-2.239 5-5 5-5-2.239-5-5z" stroke="#62748e" strokeWidth="1.1"/><path d="M5 7h4" stroke="#62748e" strokeWidth="1.2" strokeLinecap="round"/></svg>
@@ -105,7 +99,7 @@ export default function StaffPage() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const search    = searchParams.get('search')  ?? ''
-  const isActive  = searchParams.get('status')  ?? ''   // 'true' | 'false' | ''
+  const isActive  = searchParams.get('status')  ?? ''
   const page      = Math.max(1, Number(searchParams.get('page') ?? '1'))
   const pageSize  = PEOPLE_PAGE_SIZES.includes(Number(searchParams.get('size')))
                       ? Number(searchParams.get('size'))
@@ -132,20 +126,22 @@ export default function StaffPage() {
   const hasActiveFilters = !!(search || isActive)
 
   // ── API state ──────────────────────────────────────────────────────────────
-  const [staff,       setStaff]       = useState([])
-  const [totalCount,  setTotalCount]  = useState(0)
-  const [loading,     setLoading]     = useState(true)
-  const [error,       setError]       = useState(null)
+  const [staff,        setStaff]       = useState([])
+  const [totalCount,   setTotalCount]  = useState(0)
+  const [loading,      setLoading]     = useState(true)
+  const [error,        setError]       = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting,     setDeleting]    = useState(false)
-  const [toggling,     setToggling]    = useState(null)  // id of member being toggled
+  const [toggling,     setToggling]    = useState(null)
 
   // ── Fetch employees ────────────────────────────────────────────────────────
+  // FIX: added pageSize to params sent to API + added to dependency array
   const fetchStaff = useCallback(async () => {
     setLoading(true)
     setError(null)
     const params = new URLSearchParams()
-    params.set('page', String(page))
+    params.set('page',      String(page))
+    params.set('page_size', String(pageSize))  // ← was missing, caused backend to always return 5
     if (search)   params.set('search',    search)
     if (isActive) params.set('is_active', isActive)
 
@@ -157,18 +153,16 @@ export default function StaffPage() {
       setError('Failed to load employees. Please refresh.')
     }
     setLoading(false)
-  }, [page, search, isActive])
+  }, [page, pageSize, search, isActive])  // ← pageSize added to deps
 
   useEffect(() => { fetchStaff() }, [fetchStaff])
 
   // ── Toggle block/unblock ──────────────────────────────────────────────────
   const handleToggle = async (emp) => {
     setToggling(emp.id)
-    // Optimistic update
     setStaff(prev => prev.map(s => s.id === emp.id ? { ...s, is_active: !s.is_active } : s))
     const { ok } = await apiFetch(`user/admin/users/${emp.id}/block/`, { method: 'POST' })
     if (!ok) {
-      // Revert on failure
       setStaff(prev => prev.map(s => s.id === emp.id ? { ...s, is_active: emp.is_active } : s))
     }
     setToggling(null)
@@ -204,11 +198,9 @@ export default function StaffPage() {
       <div className="min-h-full flex">
         <div className="flex-1 p-6 lg:p-8 flex flex-col gap-6 max-w-[1600px] min-w-0">
 
-          {/* Header — Add Staff button commented out (no create endpoint) */}
           <PageHeader title="Employees" subtitle="Manage your employees, their roles and access levels.">
-            {/* <button className="inline-flex items-center gap-2 h-[38px] px-4 rounded-[10px] bg-[#f54900] ...">
-              Add Staff
-            </button> */}
+            {/* Add Staff button — no create endpoint available
+            <button className="...">Add Staff</button> */}
           </PageHeader>
 
           {/* Status tabs */}
@@ -229,17 +221,14 @@ export default function StaffPage() {
             })}
           </div>
 
-          {/* Error */}
           {error && (
             <div className="px-4 py-3 bg-[#fef2f2] border border-[#fecaca] rounded-[10px]">
               <p className="text-[#c10007] text-[13px] font-semibold">{error}</p>
             </div>
           )}
 
-          {/* Table card */}
           <div className="bg-white border border-[#e2e8f0] rounded-[14px] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] overflow-hidden">
 
-            {/* Toolbar */}
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 px-6 py-4 border-b border-[#f1f5f9]">
               <div className="shrink-0">
                 <h2 className="text-[#1d293d] font-bold text-[16px] leading-[24px]">All Employees</h2>
@@ -255,7 +244,6 @@ export default function StaffPage() {
               />
             </div>
 
-            {/* Table */}
             <div className="overflow-x-auto">
               <table className="w-full min-w-[800px]">
                 <thead className="sticky top-0 z-10">
@@ -283,23 +271,19 @@ export default function StaffPage() {
                       onClick={() => navigate(`/admin/staff/${emp.id}`)}
                       className="border-b border-[#f1f5f9] last:border-b-0 hover:bg-[#fafafa] transition-colors cursor-pointer">
 
-                      {/* Checkbox */}
                       <td className="px-5 py-[14px]" onClick={e => e.stopPropagation()}>
                         <input type="checkbox" className="w-[13px] h-[13px] rounded border-[#cad5e2] accent-[#f54900] cursor-pointer"/>
                       </td>
 
-                      {/* Avatar + name — ID commented out */}
                       <td className="px-4 py-[14px]">
                         <div className="flex items-center gap-3">
                           <EmployeeAvatar emp={emp} />
                           <div>
                             <p className="text-[#0f172b] text-[14px] font-semibold leading-[20px] whitespace-nowrap">{emp.full_name}</p>
-                            {/* <p className="text-[#90a1b9] text-[12px] leading-[16px] mt-0.5 font-['Consolas',monospace]">{emp.id}</p> */}
                           </div>
                         </div>
                       </td>
 
-                      {/* Email */}
                       <td className="px-4 py-[14px]">
                         <div className="flex items-center gap-1.5">
                           <IconMail />
@@ -307,7 +291,6 @@ export default function StaffPage() {
                         </div>
                       </td>
 
-                      {/* Phone */}
                       <td className="px-4 py-[14px]">
                         <div className="flex items-center gap-1.5">
                           <IconPhone />
@@ -315,7 +298,6 @@ export default function StaffPage() {
                         </div>
                       </td>
 
-                      {/* Role */}
                       <td className="px-4 py-[14px]">
                         <div className="flex items-center gap-1.5">
                           <IconBriefcase />
@@ -323,12 +305,10 @@ export default function StaffPage() {
                         </div>
                       </td>
 
-                      {/* Status */}
                       <td className="px-4 py-[14px]">
                         <PeopleStatusBadge status={emp.is_active ? 'Active' : 'Inactive'} />
                       </td>
 
-                      {/* Actions */}
                       <td className="px-4 py-[14px] text-right" onClick={e => e.stopPropagation()}>
                         <StaffActionMenu
                           emp={emp}
@@ -342,7 +322,6 @@ export default function StaffPage() {
               </table>
             </div>
 
-            {/* Pagination */}
             {!loading && totalCount > 0 && (
               <EnhancedTablePagination
                 page={page}

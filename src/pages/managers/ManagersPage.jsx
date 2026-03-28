@@ -65,7 +65,6 @@ function Spinner() {
   )
 }
 
-// ── Inline action menu (edit + delete only — no deactivate per requirements) ──
 function ManagerActionMenu({ onEdit, onDelete }) {
   const [open, setOpen] = useState(false)
   return (
@@ -106,7 +105,7 @@ export default function ManagersPage() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const search    = searchParams.get('search')   ?? ''
-  const isActive  = searchParams.get('status')   ?? ''   // 'true' | 'false' | ''
+  const isActive  = searchParams.get('status')   ?? ''
   const page      = Math.max(1, Number(searchParams.get('page') ?? '1'))
   const pageSize  = PEOPLE_PAGE_SIZES.includes(Number(searchParams.get('size')))
                       ? Number(searchParams.get('size'))
@@ -145,11 +144,13 @@ export default function ManagersPage() {
   const [deleting,     setDeleting]     = useState(false)
 
   // ── Fetch managers ─────────────────────────────────────────────────────────
+  // FIX: added pageSize to params sent to API + added to dependency array
   const fetchManagers = useCallback(async () => {
     setLoading(true)
     setError(null)
     const params = new URLSearchParams()
-    params.set('page', String(page))
+    params.set('page',      String(page))
+    params.set('page_size', String(pageSize))  // ← was missing, caused backend to always return 5
     if (search)   params.set('search',    search)
     if (isActive) params.set('is_active', isActive)
 
@@ -161,16 +162,12 @@ export default function ManagersPage() {
       setError('Failed to load managers. Please refresh.')
     }
     setLoading(false)
-  }, [page, search, isActive])
+  }, [page, pageSize, search, isActive])  // ← pageSize added to deps
 
   useEffect(() => { fetchManagers() }, [fetchManagers])
 
-  // ── Tab counts ─────────────────────────────────────────────────────────────
-  // Only total count is available from one API call; individual tab counts
-  // would require separate requests — show total on "All" tab only
   const tabCounts = { '': totalCount, 'true': null, 'false': null }
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
   const openAdd     = () => { setEditTarget(null);  setDrawerMode('add')  }
   const openEdit    = (mgr) => { setEditTarget(mgr); setDrawerMode('edit') }
   const closeDrawer = () => { setDrawerMode(null); setEditTarget(null) }
@@ -206,7 +203,6 @@ export default function ManagersPage() {
       <div className="min-h-full flex">
         <div className="flex-1 p-6 lg:p-8 flex flex-col gap-6 max-w-[1600px] min-w-0">
 
-          {/* Header */}
           <PageHeader title="Managers" subtitle="Manage your field operations managers">
             <button onClick={openAdd}
               className="inline-flex items-center gap-2 h-[38px] px-4 rounded-[10px] bg-[#f54900] hover:bg-[#c73b00] text-white text-[14px] font-semibold transition-colors shadow-[0px_1px_3px_rgba(245,73,0,0.3)] whitespace-nowrap">
@@ -233,17 +229,14 @@ export default function ManagersPage() {
             })}
           </div>
 
-          {/* Error */}
           {error && (
             <div className="px-4 py-3 bg-[#fef2f2] border border-[#fecaca] rounded-[10px]">
               <p className="text-[#c10007] text-[13px] font-semibold">{error}</p>
             </div>
           )}
 
-          {/* Table card */}
           <div className="bg-white border border-[#e2e8f0] rounded-[14px] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] overflow-hidden">
 
-            {/* Toolbar */}
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 px-6 py-4 border-b border-[#f1f5f9]">
               <div className="shrink-0">
                 <h2 className="text-[#1d293d] font-bold text-[16px] leading-[24px]">All Managers</h2>
@@ -259,7 +252,6 @@ export default function ManagersPage() {
               />
             </div>
 
-            {/* Table */}
             <div className="overflow-x-auto">
               <table className="w-full min-w-[720px]">
                 <thead className="sticky top-0 z-10">
@@ -287,23 +279,19 @@ export default function ManagersPage() {
                       onClick={() => navigate(`/admin/managers/${mgr.id}`)}
                       className="border-b border-[#f1f5f9] last:border-b-0 hover:bg-[#fafafa] transition-colors cursor-pointer">
 
-                      {/* Checkbox */}
                       <td className="px-5 py-[14px]" onClick={e => e.stopPropagation()}>
                         <input type="checkbox" className="w-[13px] h-[13px] rounded border-[#cad5e2] accent-[#f54900] cursor-pointer"/>
                       </td>
 
-                      {/* Avatar + name  — ID commented out per requirements */}
                       <td className="px-4 py-[14px]">
                         <div className="flex items-center gap-3">
                           <ManagerAvatar mgr={mgr} />
                           <div>
                             <p className="text-[#0f172b] text-[14px] font-semibold leading-[20px] whitespace-nowrap">{mgr.full_name}</p>
-                            {/* <p className="text-[#90a1b9] text-[12px] leading-[16px] mt-0.5 font-['Consolas',monospace]">{mgr.id}</p> */}
                           </div>
                         </div>
                       </td>
 
-                      {/* Email */}
                       <td className="px-4 py-[14px]">
                         <div className="flex items-center gap-1.5">
                           <IconMail />
@@ -311,7 +299,6 @@ export default function ManagersPage() {
                         </div>
                       </td>
 
-                      {/* Phone */}
                       <td className="px-4 py-[14px] whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           <IconPhone />
@@ -319,7 +306,6 @@ export default function ManagersPage() {
                         </div>
                       </td>
 
-                      {/* Role */}
                       <td className="px-4 py-[14px]">
                         <div className="flex items-center gap-1.5">
                           <IconBriefcase />
@@ -327,7 +313,6 @@ export default function ManagersPage() {
                         </div>
                       </td>
 
-                      {/* Job count */}
                       <td className="px-4 py-[14px]">
                         <div className="flex items-center gap-1.5">
                           <IconClipboard />
@@ -336,12 +321,6 @@ export default function ManagersPage() {
                         </div>
                       </td>
 
-                      {/* Status */}
-                      {/* <td className="px-4 py-[14px]">
-                        <PeopleStatusBadge status={mgr.is_active ? 'Active' : 'Inactive'} />
-                      </td> */}
-
-                      {/* Actions — no deactivate per requirements */}
                       <td className="px-4 py-[14px] text-right" onClick={e => e.stopPropagation()}>
                         <ManagerActionMenu
                           onEdit={() => openEdit(mgr)}
@@ -354,7 +333,6 @@ export default function ManagersPage() {
               </table>
             </div>
 
-            {/* Pagination */}
             {!loading && totalCount > 0 && (
               <EnhancedTablePagination
                 page={page}
@@ -371,7 +349,6 @@ export default function ManagersPage() {
           </div>
         </div>
 
-        {/* Drawer */}
         {drawerMode && (
           <>
             <div className="hidden xl:block fixed inset-0 z-30 bg-[#0f172b]/10 cursor-pointer" onClick={closeDrawer} />
