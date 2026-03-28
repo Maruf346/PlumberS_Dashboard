@@ -122,6 +122,7 @@ export default function JobDetailsPage() {
             job={job}
             onEdit={() => setEditOpen(true)}
             onDelete={() => setShowDelete(true)}
+            onStatusChange={newStatus => setJob(prev => ({ ...prev, status: newStatus }))}
           />
         </div>
 
