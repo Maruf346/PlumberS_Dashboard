@@ -186,6 +186,35 @@ export default function CreateJobPage({ onClose, onSaved }) {
     assigned_manager_ids: [], assigned_to_id: '', vehicle_id: '',
   })
   const set = field => value => setForm(prev => ({ ...prev, [field]: value }))
+
+  // ── Vehicle auto-fill state ────────────────────────────────────────────────
+  const [vehicleAutoFilled,  setVehicleAutoFilled]  = useState(false)
+  const [fetchingVehicle,    setFetchingVehicle]    = useState(false)
+
+  // When staff is selected, fetch their assigned vehicle and auto-fill
+  const handleStaffChange = useCallback(async (userId) => {
+    setForm(prev => ({ ...prev, assigned_to_id: userId }))
+
+    if (!userId) {
+      // Staff cleared — wipe vehicle only if it was auto-filled
+      setForm(prev => ({ ...prev, vehicle_id: vehicleAutoFilled ? '' : prev.vehicle_id }))
+      setVehicleAutoFilled(false)
+      return
+    }
+
+    setFetchingVehicle(true)
+    const { ok, data } = await apiFetch(`user/${userId}/assign-vehicle/`)
+    setFetchingVehicle(false)
+
+    if (ok && data?.assigned_vehicle?.id) {
+      setForm(prev => ({ ...prev, vehicle_id: data.assigned_vehicle.id }))
+      setVehicleAutoFilled(true)
+    } else {
+      // No assigned vehicle — leave vehicle field as-is
+      setVehicleAutoFilled(false)
+    }
+  }, [vehicleAutoFilled])
+
   const [errors,   setErrors]   = useState({})
   const [saving,   setSaving]   = useState(false)
   const [apiError, setApiError] = useState('')
@@ -331,11 +360,29 @@ export default function CreateJobPage({ onClose, onSaved }) {
                 value={form.assigned_manager_ids} onChange={set('assigned_manager_ids')}
                 placeholder="Select one or more managers…" required icon={IconUserCog} error={errors.assigned_manager_ids} />
               <FormSelect label="Assign Staff" id="assigned_to_id" value={form.assigned_to_id}
-                onChange={set('assigned_to_id')} options={staff}
+                onChange={handleStaffChange} options={staff}
                 placeholder="Select staff member…" required icon={IconUserCheck} error={errors.assigned_to_id} />
-              <FormSelect label="Vehicle" id="vehicle_id" value={form.vehicle_id}
-                onChange={set('vehicle_id')} options={vehicles}
-                placeholder="Select vehicle… (optional)" icon={IconTruck} />
+              {/* Vehicle — auto-filled from staff's assigned vehicle, but fully editable */}
+              <div className="flex flex-col gap-[6px]">
+                <div className="flex items-center gap-1.5">
+                  <label className="text-[#0f172b] text-[14px] font-semibold leading-[20px]">Vehicle</label>
+                  {vehicleAutoFilled && (
+                    <span className="flex items-center gap-1 text-[#90a1b9]">
+                      <IconLock />
+                      <span className="text-[11px]">Auto-filled · editable</span>
+                    </span>
+                  )}
+                </div>
+                <FormSelect
+                  id="vehicle_id"
+                  value={form.vehicle_id}
+                  onChange={v => { set('vehicle_id')(v); setVehicleAutoFilled(false) }}
+                  options={vehicles}
+                  placeholder={fetchingVehicle ? 'Fetching assigned vehicle…' : 'Select vehicle… (optional)'}
+                  icon={IconTruck}
+                  disabled={fetchingVehicle}
+                />
+              </div>
             </section>
 
             <div className="h-px bg-[#f1f5f9]" />
