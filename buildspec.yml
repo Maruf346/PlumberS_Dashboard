@@ -1,0 +1,30 @@
+version: 0.2
+
+env:
+  parameter-store:
+    VITE_API_BASE_URL: "/plumbers/prod/api-url"
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - npm ci
+
+  build:
+    commands:
+      - npm run build
+
+  post_build:
+    commands:
+      # All assets (JS/CSS) get long-term cache — they have content hashes in filenames
+      - aws s3 sync dist/ s3://$S3_BUCKET/ --delete
+          --exclude "index.html"
+          --cache-control "public,max-age=31536000,immutable"
+      # index.html must never be cached — it references the hashed assets
+      - aws s3 cp dist/index.html s3://$S3_BUCKET/index.html
+          --cache-control "no-cache,no-store,must-revalidate"
+      # Bust CloudFront cache (skip if not using CloudFront)
+      - if [ -n "$CF_DIST_ID" ]; then
+          aws cloudfront create-invalidation --distribution-id $CF_DIST_ID --paths "/*";
+        fi
