@@ -36,7 +36,7 @@ const PRIORITY_OPTIONS = [
   { value: 'low',      label: 'Low'      },
   { value: 'medium',   label: 'Medium'   },
   { value: 'high',     label: 'High'     },
-  { value: 'critical', label: 'Critical' },
+  { value: 'urgent', label: 'Urgent' },
 ]
 
 // ── Locked auto-fill field ────────────────────────────────────────────────────
@@ -167,7 +167,7 @@ export default function CreateJobPage({ onClose, onSaved }) {
       apiFetch('user/admin/employeelist/'),
       apiFetch('fleet/?include_inactive=false'),
       apiFetch('safety-forms/?all=true'),
-      apiFetch('api/reports/types/'),
+      apiFetch('reports/types/'),
     ]).then(([c, m, s, v, sf, rt]) => {
       if (c.ok)  setClients((c.data?.results   ?? c.data ?? []))
       if (m.ok)  setManagers((m.data?.results  ?? []).map(x => ({ value: x.id, label: x.full_name })))
