@@ -1,6 +1,5 @@
 // src/pages/editjob/EditJobDrawer.jsx
 // Edit Job — drawer component, receives job as prop (already fetched by JobDetailsPage).
-// Opened as a fixed overlay, so the page behind it stays fully visible.
 // PATCH /api/jobs/{id}/update/    DELETE /api/jobs/{id}/update/
 // Attachments: POST /api/jobs/{id}/attachments/ (multipart, field name: files, one call)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -191,7 +190,6 @@ function NewAttachmentZone({ files, onAdd, onRemove }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function EditJobDrawer({ jobId, job, onClose, onSaved, onDeleted }) {
-  // ── Dropdown options ───────────────────────────────────────────────────────
   const [clients,     setClients]     = useState([])
   const [managers,    setManagers]    = useState([])
   const [staff,       setStaff]       = useState([])
@@ -200,7 +198,6 @@ export default function EditJobDrawer({ jobId, job, onClose, onSaved, onDeleted 
   const [reportTypes, setReportTypes] = useState([])
   const [loadingOpts, setLoadingOpts] = useState(true)
 
-  // ── Form state — pre-filled from job prop ──────────────────────────────────
   const [form,        setForm]        = useState(null)
   const [errors,      setErrors]      = useState({})
   const [apiError,    setApiError]    = useState('')
@@ -212,7 +209,7 @@ export default function EditJobDrawer({ jobId, job, onClose, onSaved, onDeleted 
 
   const set = field => value => setForm(prev => ({ ...prev, [field]: value }))
 
-  // ── Initialise form from job prop ──────────────────────────────────────────
+  // ── Initialise form from job prop — includes insured fields ────────────────
   useEffect(() => {
     if (!job) return
     setAttachments(job.attachments ?? [])
@@ -226,6 +223,12 @@ export default function EditJobDrawer({ jobId, job, onClose, onSaved, onDeleted 
       assigned_manager_ids: (job.assigned_managers ?? []).map(m => m.id),
       assigned_to_id:       job.assigned_to?.id                      ?? '',
       vehicle_id:           job.vehicle?.id                          ?? '',
+      // Insured Details — pre-filled from existing job data
+      insured_name:         job.insured_name     ?? '',
+      insured_phone:        job.insured_phone    ?? '',
+      insured_email:        job.insured_email    ?? '',
+      insured_address:      job.insured_address  ?? '',
+      site_access_info:     job.site_access_info ?? '',
     })
   }, [job])
 
@@ -281,6 +284,12 @@ export default function EditJobDrawer({ jobId, job, onClose, onSaved, onDeleted 
       safety_form_ids:      form.safety_form_ids,
       report_type_ids:      form.report_type_ids,
       vehicle_id:           form.vehicle_id || null,
+      // Insured Details
+      insured_name:         form.insured_name.trim(),
+      insured_phone:        form.insured_phone.trim(),
+      insured_email:        form.insured_email.trim(),
+      insured_address:      form.insured_address.trim(),
+      site_access_info:     form.site_access_info.trim(),
     }
 
     const { data, ok } = await apiFetch(`jobs/${jobId}/update/`, {
@@ -368,19 +377,23 @@ export default function EditJobDrawer({ jobId, job, onClose, onSaved, onDeleted 
                 </div>
               )}
 
-              {/* Client */}
+              {/* Section 1: Client Details */}
               <section className="flex flex-col gap-4">
                 <FormSectionHeader icon={IconUser} title="Client Details" />
                 <ClientSearch clients={clients} value={form.client_id} onChange={set('client_id')} error={errors.client_id} />
-                <LockedField label="Phone Number"    icon={IconPhone}  value={selectedClient?.phone}                placeholder="Auto-filled from client" />
-                <LockedField label="Insured Address" icon={IconMapPin} value={selectedClient?.address}             placeholder="Auto-filled from client" />
-                <LockedField label="Insured Name"    icon={IconUser}   value={selectedClient?.contact_person_name} placeholder="Auto-filled from client" />
-                <LockedField label="Insured Email"   icon={IconMail}   value={selectedClient?.email}               placeholder="Auto-filled from client" />
+                {/* Renamed: Phone Number → Client Phone Number */}
+                <LockedField label="Client Phone Number"  icon={IconPhone} value={selectedClient?.phone}                placeholder="Auto-filled from client" />
+                {/* Renamed: Insured Name → Project Manager Name */}
+                <LockedField label="Project Manager Name" icon={IconUser}  value={selectedClient?.contact_person_name} placeholder="Auto-filled from client" />
+                {/* Insured Address and Insured Email removed — now in Insured Details section
+                <LockedField label="Insured Address" icon={IconMapPin} value={selectedClient?.address} placeholder="Auto-filled from client" />
+                <LockedField label="Insured Email"   icon={IconMail}   value={selectedClient?.email}   placeholder="Auto-filled from client" />
+                */}
               </section>
 
               <div className="h-px bg-[#f1f5f9]" />
 
-              {/* Job Info */}
+              {/* Section 2: Job Info */}
               <section className="flex flex-col gap-4">
                 <FormSectionHeader icon={IconBriefcase} title="Job Info" />
                 <FormInput label="Job Name" id="job_name" value={form.job_name} onChange={set('job_name')}
@@ -393,7 +406,26 @@ export default function EditJobDrawer({ jobId, job, onClose, onSaved, onDeleted 
 
               <div className="h-px bg-[#f1f5f9]" />
 
-              {/* Safety & Reports */}
+              {/* Section 3: Insured Details — manual entry */}
+              <section className="flex flex-col gap-4">
+                <FormSectionHeader icon={IconShield} title="Insured Details" />
+                <FormInput label="Insured Name" id="insured_name" value={form.insured_name} onChange={set('insured_name')}
+                  placeholder="Full name of the insured party" icon={IconUser} />
+                <div className="grid grid-cols-2 gap-3">
+                  <FormInput label="Insured Phone" id="insured_phone" value={form.insured_phone} onChange={set('insured_phone')}
+                    placeholder="+61 4xx xxx xxx" icon={IconPhone} />
+                  <FormInput label="Insured Email" id="insured_email" value={form.insured_email} onChange={set('insured_email')}
+                    placeholder="email@example.com" icon={IconMail} />
+                </div>
+                <FormInput label="Insured Address" id="insured_address" value={form.insured_address} onChange={set('insured_address')}
+                  placeholder="Street address of the insured property" icon={IconMapPin} />
+                <FormTextarea label="Site Access Info" id="site_access_info" value={form.site_access_info} onChange={set('site_access_info')}
+                  placeholder="Gate codes, access instructions, entry notes… (optional)" rows={3} />
+              </section>
+
+              <div className="h-px bg-[#f1f5f9]" />
+
+              {/* Section 4: Safety & Reports */}
               <section className="flex flex-col gap-4">
                 <FormSectionHeader icon={IconShield} title="Safety & Reports" />
                 <MultiSelect label="Safety Requirement Form" id="safety_form_ids" options={safetyForms}
@@ -406,7 +438,7 @@ export default function EditJobDrawer({ jobId, job, onClose, onSaved, onDeleted 
 
               <div className="h-px bg-[#f1f5f9]" />
 
-              {/* Assignment */}
+              {/* Section 5: Assignment */}
               <section className="flex flex-col gap-4">
                 <FormSectionHeader icon={IconUsers} title="Assignment" />
                 <MultiSelect label="Assign Manager(s)" id="assigned_manager_ids" options={managers}
@@ -422,7 +454,7 @@ export default function EditJobDrawer({ jobId, job, onClose, onSaved, onDeleted 
 
               <div className="h-px bg-[#f1f5f9]" />
 
-              {/* Attachments */}
+              {/* Section 6: Attachments */}
               <section className="flex flex-col gap-4">
                 <FormSectionHeader icon={IconPaperclip} title="Attachments" />
                 <ExistingAttachments
