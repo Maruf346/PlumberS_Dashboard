@@ -9,6 +9,7 @@ import { apiFetch }                         from '@/utils/apiFetch'
 
 import JobDetailHeader        from '@/components/jobdetails/JobDetailHeader'
 import ClientDetailsCard      from '@/components/jobdetails/ClientDetailsCard'
+import InsuredDetailsCard     from '@/components/jobdetails/InsuredDetailsCard'
 import ScheduleAssignmentCard from '@/components/jobdetails/ScheduleAssignmentCard'
 import LiveActivityCard       from '@/components/jobdetails/LiveActivityCard'
 import JobTabNav              from '@/components/jobdetails/JobTabNav'
@@ -130,6 +131,7 @@ export default function JobDetailsPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             <ClientDetailsCard client={job.client} />
+              <InsuredDetailsCard job={job} />
             <ScheduleAssignmentCard job={job} />
             <LiveActivityCard jobId={job.id} activities={job.activities ?? []} />
           </div>

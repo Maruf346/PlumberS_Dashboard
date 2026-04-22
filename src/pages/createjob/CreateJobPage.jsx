@@ -36,7 +36,7 @@ const PRIORITY_OPTIONS = [
   { value: 'low',      label: 'Low'      },
   { value: 'medium',   label: 'Medium'   },
   { value: 'high',     label: 'High'     },
-  { value: 'urgent', label: 'Urgent' },
+  { value: 'critical', label: 'Critical' },
 ]
 
 // ── Locked auto-fill field ────────────────────────────────────────────────────
@@ -167,7 +167,7 @@ export default function CreateJobPage({ onClose, onSaved }) {
       apiFetch('user/admin/employeelist/'),
       apiFetch('fleet/?include_inactive=false'),
       apiFetch('safety-forms/?all=true'),
-      apiFetch('reports/types/'),
+      apiFetch('api/reports/types/'),
     ]).then(([c, m, s, v, sf, rt]) => {
       if (c.ok)  setClients((c.data?.results   ?? c.data ?? []))
       if (m.ok)  setManagers((m.data?.results  ?? []).map(x => ({ value: x.id, label: x.full_name })))
@@ -184,43 +184,30 @@ export default function CreateJobPage({ onClose, onSaved }) {
     client_id: '', job_name: '', job_details: '', priority: '',
     safety_form_ids: [], report_type_ids: [],
     assigned_manager_ids: [], assigned_to_id: '', vehicle_id: '',
+    // Insured Details — manual entry
+    insured_name: '', insured_phone: '', insured_email: '', insured_address: '', site_access_info: '',
   })
   const set = field => value => setForm(prev => ({ ...prev, [field]: value }))
-
-  // ── Vehicle auto-fill state ────────────────────────────────────────────────
-  const [vehicleAutoFilled,  setVehicleAutoFilled]  = useState(false)
-  const [fetchingVehicle,    setFetchingVehicle]    = useState(false)
-
-  // When staff is selected, fetch their assigned vehicle and auto-fill
-  const handleStaffChange = useCallback(async (userId) => {
-    setForm(prev => ({ ...prev, assigned_to_id: userId }))
-
-    if (!userId) {
-      // Staff cleared — wipe vehicle only if it was auto-filled
-      setForm(prev => ({ ...prev, vehicle_id: vehicleAutoFilled ? '' : prev.vehicle_id }))
-      setVehicleAutoFilled(false)
-      return
-    }
-
-    setFetchingVehicle(true)
-    const { ok, data } = await apiFetch(`user/${userId}/assign-vehicle/`)
-    setFetchingVehicle(false)
-
-    if (ok && data?.assigned_vehicle?.id) {
-      setForm(prev => ({ ...prev, vehicle_id: data.assigned_vehicle.id }))
-      setVehicleAutoFilled(true)
-    } else {
-      // No assigned vehicle — leave vehicle field as-is
-      setVehicleAutoFilled(false)
-    }
-  }, [vehicleAutoFilled])
-
   const [errors,   setErrors]   = useState({})
   const [saving,   setSaving]   = useState(false)
   const [apiError, setApiError] = useState('')
-  const [attachFiles, setAttachFiles] = useState([])
+  const [attachFiles,    setAttachFiles]    = useState([])
+  const [fetchingVehicle, setFetchingVehicle] = useState(false)
 
   const selectedClient = clients.find(c => c.id === form.client_id) ?? null
+
+  // ── Staff selection — auto-fill vehicle from employee's assigned vehicle ────
+  const handleStaffChange = async (staffId) => {
+    set('assigned_to_id')(staffId)
+    if (!staffId) return
+    setFetchingVehicle(true)
+    const { data, ok } = await apiFetch(`user/${staffId}/assign-vehicle/`)
+    if (ok && data?.assigned_vehicle?.id) {
+      // Auto-fill vehicle only if one is assigned to this employee
+      set('vehicle_id')(data.assigned_vehicle.id)
+    }
+    setFetchingVehicle(false)
+  }
 
   // ── Validation ─────────────────────────────────────────────────────────────
   const validate = () => {
@@ -252,6 +239,12 @@ export default function CreateJobPage({ onClose, onSaved }) {
       safety_form_ids:      form.safety_form_ids,
       report_type_ids:      form.report_type_ids,
       ...(form.vehicle_id ? { vehicle_id: form.vehicle_id } : {}),
+      // Insured Details
+      insured_name:     form.insured_name.trim(),
+      insured_phone:    form.insured_phone.trim(),
+      insured_email:    form.insured_email.trim(),
+      insured_address:  form.insured_address.trim(),
+      site_access_info: form.site_access_info.trim(),
     }
 
     const { data, ok } = await apiFetch('jobs/create/', {
@@ -272,14 +265,14 @@ export default function CreateJobPage({ onClose, onSaved }) {
       return
     }
 
-    // Upload attachments — one single multipart call, all files under 'files' key.
-    // Backend response is { data: { id: "..." } }
-    const jobId = data?.data?.id ?? data?.id
+    // Upload attachments if any
+    const jobId = data.id
     if (jobId && attachFiles.length > 0) {
-      const fd = new FormData()
-      attachFiles.forEach(file => fd.append('files', file))
-      // Do NOT set Content-Type — browser sets it automatically with the multipart boundary
-      await apiFetch(`jobs/${jobId}/attachments/`, { method: 'POST', body: fd })
+      for (const file of attachFiles) {
+        const fd = new FormData()
+        fd.append('file', file)
+        await apiFetch(`jobs/${jobId}/attachments/`, { method: 'POST', body: fd })
+      }
     }
 
     setSaving(false)
@@ -319,10 +312,12 @@ export default function CreateJobPage({ onClose, onSaved }) {
             <section className="flex flex-col gap-4">
               <FormSectionHeader icon={IconUser} title="Client Details" />
               <ClientSearch clients={clients} value={form.client_id} onChange={set('client_id')} error={errors.client_id} />
-              <LockedField label="Phone Number"   icon={IconPhone}  value={selectedClient?.phone}                placeholder="Auto-filled from client" />
+              <LockedField label="Client Phone Number" icon={IconPhone} value={selectedClient?.phone}                placeholder="Auto-filled from client" />
+              <LockedField label="Project Manager Name" icon={IconUser} value={selectedClient?.contact_person_name} placeholder="Auto-filled from client" />
+              {/* Insured Address and Insured Email removed from client section — now in Insured Details section below
               <LockedField label="Insured Address" icon={IconMapPin} value={selectedClient?.address}             placeholder="Auto-filled from client" />
-              <LockedField label="Insured Name"    icon={IconUser}   value={selectedClient?.contact_person_name} placeholder="Auto-filled from client" />
               <LockedField label="Insured Email"   icon={IconMail}   value={selectedClient?.email}               placeholder="Auto-filled from client" />
+              */}
             </section>
 
             <div className="h-px bg-[#f1f5f9]" />
@@ -340,7 +335,26 @@ export default function CreateJobPage({ onClose, onSaved }) {
 
             <div className="h-px bg-[#f1f5f9]" />
 
-            {/* Section 3: Safety & Reports */}
+            {/* Section 3: Insured Details */}
+            <section className="flex flex-col gap-4">
+              <FormSectionHeader icon={IconUser} title="Insured Details" />
+              <FormInput label="Insured Name" id="insured_name" value={form.insured_name} onChange={set('insured_name')}
+                placeholder="Full name of the insured party" icon={IconUser} />
+              <div className="grid grid-cols-2 gap-3">
+                <FormInput label="Insured Phone" id="insured_phone" value={form.insured_phone} onChange={set('insured_phone')}
+                  placeholder="+61 4xx xxx xxx" icon={IconPhone} />
+                <FormInput label="Insured Email" id="insured_email" value={form.insured_email} onChange={set('insured_email')}
+                  placeholder="email@example.com" icon={IconMail} />
+              </div>
+              <FormInput label="Insured Address" id="insured_address" value={form.insured_address} onChange={set('insured_address')}
+                placeholder="Street address of the insured property" icon={IconMapPin} />
+              <FormTextarea label="Site Access Info" id="site_access_info" value={form.site_access_info} onChange={set('site_access_info')}
+                placeholder="Gate codes, access instructions, entry notes… (optional)" rows={3} />
+            </section>
+
+            <div className="h-px bg-[#f1f5f9]" />
+
+            {/* Section 4: Safety & Reports */}
             <section className="flex flex-col gap-4">
               <FormSectionHeader icon={IconShield} title="Safety & Reports" />
               <MultiSelect label="Safety Requirement Form" id="safety_form_ids" options={safetyForms}
@@ -353,7 +367,7 @@ export default function CreateJobPage({ onClose, onSaved }) {
 
             <div className="h-px bg-[#f1f5f9]" />
 
-            {/* Section 4: Assignment */}
+            {/* Section 5: Assignment */}
             <section className="flex flex-col gap-4">
               <FormSectionHeader icon={IconUsers} title="Assignment" />
               <MultiSelect label="Assign Manager(s)" id="assigned_manager_ids" options={managers}
@@ -364,30 +378,24 @@ export default function CreateJobPage({ onClose, onSaved }) {
                 placeholder="Select staff member…" required icon={IconUserCheck} error={errors.assigned_to_id} />
               {/* Vehicle — auto-filled from staff's assigned vehicle, but fully editable */}
               <div className="flex flex-col gap-[6px]">
-                <div className="flex items-center gap-1.5">
-                  <label className="text-[#0f172b] text-[14px] font-semibold leading-[20px]">Vehicle</label>
-                  {vehicleAutoFilled && (
-                    <span className="flex items-center gap-1 text-[#90a1b9]">
-                      <IconLock />
-                      <span className="text-[11px]">Auto-filled · editable</span>
-                    </span>
-                  )}
-                </div>
-                <FormSelect
-                  id="vehicle_id"
-                  value={form.vehicle_id}
-                  onChange={v => { set('vehicle_id')(v); setVehicleAutoFilled(false) }}
-                  options={vehicles}
-                  placeholder={fetchingVehicle ? 'Fetching assigned vehicle…' : 'Select vehicle… (optional)'}
-                  icon={IconTruck}
-                  disabled={fetchingVehicle}
-                />
+                <FormSelect label="Vehicle" id="vehicle_id" value={form.vehicle_id}
+                  onChange={set('vehicle_id')} options={vehicles}
+                  placeholder="Select vehicle… (optional)" icon={IconTruck} />
+                {fetchingVehicle && (
+                  <p className="text-[12px] text-[#62748e] flex items-center gap-1.5">
+                    <span className="inline-block w-3 h-3 rounded-full border-2 border-[#e2e8f0] border-t-[#f54900] animate-spin"/>
+                    Auto-filling vehicle from employee assignment…
+                  </p>
+                )}
+                {!fetchingVehicle && form.vehicle_id && form.assigned_to_id && (
+                  <p className="text-[12px] text-[#007a55]">✓ Vehicle auto-filled from employee's assigned vehicle</p>
+                )}
               </div>
             </section>
 
             <div className="h-px bg-[#f1f5f9]" />
 
-            {/* Section 5: Attachments */}
+            {/* Section 6: Attachments */}
             <section className="flex flex-col gap-4">
               <FormSectionHeader icon={IconPaperclip} title="Attachments" />
               <AttachmentZone
