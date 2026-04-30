@@ -320,7 +320,7 @@ export default function VehicleDetailsPage() {
   // ── Fetch assigned employee ────────────────────────────────────────────────
   useEffect(() => {
     apiFetch(`fleet/${vehicleId}/assigned-employee/`).then(({ data, ok }) => {
-      setAssignedEmp(ok && data && data.employee_id ? data : null)
+      setAssignedEmp(ok && data?.assigned_employee ? data.assigned_employee : null)
     })
   }, [vehicleId])
 
