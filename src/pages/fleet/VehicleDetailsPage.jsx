@@ -281,31 +281,13 @@ function Spinner() {
 }
 
 // ── Fuel History Detail Modal ─────────────────────────────────────────────────
-function FuelHistoryDetailModal({ fuelId, onClose }) {
-  const [detail,  setDetail]  = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    const load = async () => {
-      setLoading(true)
-      setError(false)
-      const { data, ok } = await apiFetch(`fleet/fuel-entry/${fuelId}/`)
-      if (!cancelled) {
-        if (ok && data) setDetail(data)
-        else setError(true)
-        setLoading(false)
-      }
-    }
-    load()
-    return () => { cancelled = true }
-  }, [fuelId])
-
+function FuelHistoryDetailModal({ fuelEntry, onClose }) {
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
   }, [])
+
+  if (!fuelEntry) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0f172b]/50 backdrop-blur-sm"
@@ -317,9 +299,7 @@ function FuelHistoryDetailModal({ fuelId, onClose }) {
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#f1f5f9] shrink-0">
           <div>
             <h3 className="text-[#0f172b] font-bold text-[17px] leading-[24px]">Fuel Entry Detail</h3>
-            {detail && (
-              <p className="text-[#90a1b9] text-[12px] mt-0.5 font-mono">{detail.id}</p>
-            )}
+            <p className="text-[#90a1b9] text-[12px] mt-0.5 font-mono">{fuelEntry.id}</p>
           </div>
           <button onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-[8px] border border-[#e2e8f0] hover:bg-[#f8fafc] transition-colors">
@@ -329,72 +309,64 @@ function FuelHistoryDetailModal({ fuelId, onClose }) {
 
         {/* Modal body */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <div className="w-7 h-7 rounded-full border-2 border-[#e2e8f0] border-t-[#f54900] animate-spin" />
-            </div>
-          ) : error ? (
-            <div className="py-12 text-center text-[#c10007] text-[14px]">Failed to load fuel entry detail.</div>
-          ) : detail ? (
-            <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-5">
 
-              {/* Summary grid */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] px-4 py-3">
-                  <p className="text-[11px] font-semibold text-[#62748e] uppercase tracking-[0.5px] mb-1">Date</p>
-                  <p className="text-[#0f172b] text-[14px] font-semibold">{fmtDate(detail.date) ?? '—'}</p>
-                </div>
-                <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] px-4 py-3">
-                  <p className="text-[11px] font-semibold text-[#62748e] uppercase tracking-[0.5px] mb-1">Added By</p>
-                  <p className="text-[#0f172b] text-[14px] font-semibold">{detail.added_by_name ?? '—'}</p>
-                </div>
-                <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] px-4 py-3">
-                  <p className="text-[11px] font-semibold text-[#62748e] uppercase tracking-[0.5px] mb-1">Litres</p>
-                  <p className="text-[#0f172b] text-[14px] font-semibold">{detail.litres ? `${Number(detail.litres).toFixed(2)} L` : '—'}</p>
-                </div>
-                <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] px-4 py-3">
-                  <p className="text-[11px] font-semibold text-[#62748e] uppercase tracking-[0.5px] mb-1">Cost</p>
-                  <p className="text-[#0f172b] text-[14px] font-semibold">{detail.cost ? `$${Number(detail.cost).toFixed(2)}` : '—'}</p>
-                </div>
-                <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] px-4 py-3">
-                  <p className="text-[11px] font-semibold text-[#62748e] uppercase tracking-[0.5px] mb-1">Odometer</p>
-                  <p className="text-[#0f172b] text-[14px] font-semibold">{detail.odometer_km ? `${Number(detail.odometer_km).toLocaleString()} km` : '—'}</p>
-                </div>
-                <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] px-4 py-3">
-                  <p className="text-[11px] font-semibold text-[#62748e] uppercase tracking-[0.5px] mb-1">Recorded</p>
-                  <p className="text-[#0f172b] text-[14px] font-semibold">{fmtDateTime(detail.created_at) ?? '—'}</p>
-                </div>
+            {/* Summary grid */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] px-4 py-3">
+                <p className="text-[11px] font-semibold text-[#62748e] uppercase tracking-[0.5px] mb-1">Date</p>
+                <p className="text-[#0f172b] text-[14px] font-semibold">{fmtDate(fuelEntry.date) ?? '—'}</p>
               </div>
-
-              {/* Notes */}
-              {detail.notes && (
-                <div className="flex items-start gap-2.5 p-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px]">
-                  <span className="mt-0.5 shrink-0"><IconInfo /></span>
-                  <p className="text-[#45556c] text-[13px] leading-[20px]">{detail.notes}</p>
-                </div>
-              )}
-
-              {/* Receipt photo */}
-              {detail.receipt_photo && (
-                <div>
-                  <p className="text-[#0f172b] font-bold text-[14px] mb-3">Receipt Photo</p>
-                  <a href={resolveImageUrl(detail.receipt_photo)} target="_blank" rel="noopener noreferrer"
-                    className="relative w-full max-w-[300px] rounded-[10px] overflow-hidden border border-[#e2e8f0] hover:opacity-80 transition-opacity group block">
-                    <img src={resolveImageUrl(detail.receipt_photo)} alt="Fuel receipt"
-                      className="w-full h-auto object-cover" />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                      <span className="opacity-0 group-hover:opacity-100 text-white transition-opacity"><IconCamera /></span>
-                    </div>
-                  </a>
-                  <a href={resolveImageUrl(detail.receipt_photo)} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[#1447e6] text-[13px] hover:underline mt-2">
-                    <IconExternal /> View Full Image
-                  </a>
-                </div>
-              )}
-
+              <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] px-4 py-3">
+                <p className="text-[11px] font-semibold text-[#62748e] uppercase tracking-[0.5px] mb-1">Added By</p>
+                <p className="text-[#0f172b] text-[14px] font-semibold">{fuelEntry.added_by_name ?? '—'}</p>
+              </div>
+              <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] px-4 py-3">
+                <p className="text-[11px] font-semibold text-[#62748e] uppercase tracking-[0.5px] mb-1">Litres</p>
+                <p className="text-[#0f172b] text-[14px] font-semibold">{fuelEntry.litres ? `${Number(fuelEntry.litres).toFixed(2)} L` : '—'}</p>
+              </div>
+              <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] px-4 py-3">
+                <p className="text-[11px] font-semibold text-[#62748e] uppercase tracking-[0.5px] mb-1">Cost</p>
+                <p className="text-[#0f172b] text-[14px] font-semibold">{fuelEntry.cost ? `$${Number(fuelEntry.cost).toFixed(2)}` : '—'}</p>
+              </div>
+              <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] px-4 py-3">
+                <p className="text-[11px] font-semibold text-[#62748e] uppercase tracking-[0.5px] mb-1">Odometer</p>
+                <p className="text-[#0f172b] text-[14px] font-semibold">{fuelEntry.odometer_km ? `${Number(fuelEntry.odometer_km).toLocaleString()} km` : '—'}</p>
+              </div>
+              <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] px-4 py-3">
+                <p className="text-[11px] font-semibold text-[#62748e] uppercase tracking-[0.5px] mb-1">Recorded</p>
+                <p className="text-[#0f172b] text-[14px] font-semibold">{fmtDateTime(fuelEntry.created_at) ?? '—'}</p>
+              </div>
             </div>
-          ) : null}
+
+            {/* Notes */}
+            {fuelEntry.notes && (
+              <div className="flex items-start gap-2.5 p-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px]">
+                <span className="mt-0.5 shrink-0"><IconInfo /></span>
+                <p className="text-[#45556c] text-[13px] leading-[20px]">{fuelEntry.notes}</p>
+              </div>
+            )}
+
+            {/* Receipt photo */}
+            {fuelEntry.receipt_photo && (
+              <div>
+                <p className="text-[#0f172b] font-bold text-[14px] mb-3">Receipt Photo</p>
+                <a href={resolveImageUrl(fuelEntry.receipt_photo)} target="_blank" rel="noopener noreferrer"
+                  className="relative w-full max-w-[300px] rounded-[10px] overflow-hidden border border-[#e2e8f0] hover:opacity-80 transition-opacity group block">
+                  <img src={resolveImageUrl(fuelEntry.receipt_photo)} alt="Fuel receipt"
+                    className="w-full h-auto object-cover" />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                    <span className="opacity-0 group-hover:opacity-100 text-white transition-opacity"><IconCamera /></span>
+                  </div>
+                </a>
+                <a href={resolveImageUrl(fuelEntry.receipt_photo)} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[#1447e6] text-[13px] hover:underline mt-2">
+                  <IconExternal /> View Full Image
+                </a>
+              </div>
+            )}
+
+          </div>
         </div>
 
         {/* Modal footer */}
@@ -425,7 +397,7 @@ export default function VehicleDetailsPage() {
   const [notFound,       setNotFound]       = useState(false)
   const [drawerOpen,     setDrawerOpen]     = useState(false)
   const [selectedInspId, setSelectedInspId] = useState(null)
-  const [selectedFuelId, setSelectedFuelId] = useState(null)
+  const [selectedFuelEntry, setSelectedFuelEntry] = useState(null)
   const [assignedEmp,    setAssignedEmp]    = useState(undefined) // undefined=loading, null=none
 
   // ── Fetch vehicle ─────────────────────────────────────────────────────────
@@ -521,10 +493,10 @@ export default function VehicleDetailsPage() {
       )}
 
       {/* Fuel history detail modal */}
-      {selectedFuelId && (
+      {selectedFuelEntry && (
         <FuelHistoryDetailModal
-          fuelId={selectedFuelId}
-          onClose={() => setSelectedFuelId(null)}
+          fuelEntry={selectedFuelEntry}
+          onClose={() => setSelectedFuelEntry(null)}
         />
       )}
 
@@ -746,7 +718,7 @@ export default function VehicleDetailsPage() {
                 <tbody>
                   {fuelEntries.map(fuel => (
                     <tr key={fuel.id}
-                      onClick={() => setSelectedFuelId(fuel.id)}
+                      onClick={() => setSelectedFuelEntry(fuel)}
                       className="border-b border-[#f8fafc] last:border-0 hover:bg-[#f0f4ff] transition-colors cursor-pointer">
                       <td className="px-5 py-[14px] text-[13px] text-[#45556c] whitespace-nowrap">
                         {fmtDate(fuel.date)}
