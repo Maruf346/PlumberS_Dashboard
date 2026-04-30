@@ -12,7 +12,7 @@ import { useParams, useNavigate }            from 'react-router-dom'
 
 import VehicleStatusBadge, { VehicleActiveBadge } from '@/components/fleet/VehicleStatusBadge'
 import AddEditVehicleDrawer                        from '@/pages/fleet/AddEditVehicleDrawer'
-import { apiFetch }                                from '@/utils/apiFetch'
+import { apiFetch, resolveImageUrl }              from '@/utils/apiFetch'
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 function IconArrowLeft()  { return <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 14L6 9l5-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg> }
@@ -29,6 +29,7 @@ function IconInfo()       { return <svg width="14" height="14" viewBox="0 0 14 1
 function IconClose()      { return <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="#314158" strokeWidth="1.5" strokeLinecap="round"/></svg> }
 function IconCamera()     { return <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 4h11v7H1zM4.5 4l1-2h2l1 2" stroke="#62748e" strokeWidth="1.1" strokeLinejoin="round"/><circle cx="6.5" cy="7.5" r="1.5" stroke="#62748e" strokeWidth="1.1"/></svg> }
 function IconChevronRight() { return <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M5 3l4 3.5L5 10" stroke="#90a1b9" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg> }
+function IconExternal()   { return <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M5 2H2v9h9V8M7 2h4v4M11 2L6 7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg> }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmtDate(iso) {
@@ -279,6 +280,135 @@ function Spinner() {
   )
 }
 
+// ── Fuel History Detail Modal ─────────────────────────────────────────────────
+function FuelHistoryDetailModal({ fuelId, onClose }) {
+  const [detail,  setDetail]  = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error,   setError]   = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      setLoading(true)
+      setError(false)
+      const { data, ok } = await apiFetch(`fleet/fuel-entry/${fuelId}/`)
+      if (!cancelled) {
+        if (ok && data) setDetail(data)
+        else setError(true)
+        setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [fuelId])
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0f172b]/50 backdrop-blur-sm"
+      onClick={onClose}>
+      <div className="w-full max-w-[640px] max-h-[90vh] bg-white rounded-[16px] shadow-[0px_20px_60px_rgba(15,23,43,0.25)] flex flex-col overflow-hidden"
+        onClick={e => e.stopPropagation()}>
+
+        {/* Modal header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#f1f5f9] shrink-0">
+          <div>
+            <h3 className="text-[#0f172b] font-bold text-[17px] leading-[24px]">Fuel Entry Detail</h3>
+            {detail && (
+              <p className="text-[#90a1b9] text-[12px] mt-0.5 font-mono">{detail.id}</p>
+            )}
+          </div>
+          <button onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-[8px] border border-[#e2e8f0] hover:bg-[#f8fafc] transition-colors">
+            <IconClose />
+          </button>
+        </div>
+
+        {/* Modal body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="w-7 h-7 rounded-full border-2 border-[#e2e8f0] border-t-[#f54900] animate-spin" />
+            </div>
+          ) : error ? (
+            <div className="py-12 text-center text-[#c10007] text-[14px]">Failed to load fuel entry detail.</div>
+          ) : detail ? (
+            <div className="flex flex-col gap-5">
+
+              {/* Summary grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] px-4 py-3">
+                  <p className="text-[11px] font-semibold text-[#62748e] uppercase tracking-[0.5px] mb-1">Date</p>
+                  <p className="text-[#0f172b] text-[14px] font-semibold">{fmtDate(detail.date) ?? '—'}</p>
+                </div>
+                <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] px-4 py-3">
+                  <p className="text-[11px] font-semibold text-[#62748e] uppercase tracking-[0.5px] mb-1">Added By</p>
+                  <p className="text-[#0f172b] text-[14px] font-semibold">{detail.added_by_name ?? '—'}</p>
+                </div>
+                <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] px-4 py-3">
+                  <p className="text-[11px] font-semibold text-[#62748e] uppercase tracking-[0.5px] mb-1">Litres</p>
+                  <p className="text-[#0f172b] text-[14px] font-semibold">{detail.litres ? `${Number(detail.litres).toFixed(2)} L` : '—'}</p>
+                </div>
+                <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] px-4 py-3">
+                  <p className="text-[11px] font-semibold text-[#62748e] uppercase tracking-[0.5px] mb-1">Cost</p>
+                  <p className="text-[#0f172b] text-[14px] font-semibold">{detail.cost ? `$${Number(detail.cost).toFixed(2)}` : '—'}</p>
+                </div>
+                <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] px-4 py-3">
+                  <p className="text-[11px] font-semibold text-[#62748e] uppercase tracking-[0.5px] mb-1">Odometer</p>
+                  <p className="text-[#0f172b] text-[14px] font-semibold">{detail.odometer_km ? `${Number(detail.odometer_km).toLocaleString()} km` : '—'}</p>
+                </div>
+                <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] px-4 py-3">
+                  <p className="text-[11px] font-semibold text-[#62748e] uppercase tracking-[0.5px] mb-1">Recorded</p>
+                  <p className="text-[#0f172b] text-[14px] font-semibold">{fmtDateTime(detail.created_at) ?? '—'}</p>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {detail.notes && (
+                <div className="flex items-start gap-2.5 p-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px]">
+                  <span className="mt-0.5 shrink-0"><IconInfo /></span>
+                  <p className="text-[#45556c] text-[13px] leading-[20px]">{detail.notes}</p>
+                </div>
+              )}
+
+              {/* Receipt photo */}
+              {detail.receipt_photo && (
+                <div>
+                  <p className="text-[#0f172b] font-bold text-[14px] mb-3">Receipt Photo</p>
+                  <a href={resolveImageUrl(detail.receipt_photo)} target="_blank" rel="noopener noreferrer"
+                    className="relative w-full max-w-[300px] rounded-[10px] overflow-hidden border border-[#e2e8f0] hover:opacity-80 transition-opacity group block">
+                    <img src={resolveImageUrl(detail.receipt_photo)} alt="Fuel receipt"
+                      className="w-full h-auto object-cover" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                      <span className="opacity-0 group-hover:opacity-100 text-white transition-opacity"><IconCamera /></span>
+                    </div>
+                  </a>
+                  <a href={resolveImageUrl(detail.receipt_photo)} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[#1447e6] text-[13px] hover:underline mt-2">
+                    <IconExternal /> View Full Image
+                  </a>
+                </div>
+              )}
+
+            </div>
+          ) : null}
+        </div>
+
+        {/* Modal footer */}
+        <div className="flex justify-end px-6 py-4 border-t border-[#f1f5f9] shrink-0">
+          <button onClick={onClose}
+            className="px-4 py-[9px] bg-white border border-[#e2e8f0] text-[#314158] text-[14px] font-semibold rounded-[10px] hover:bg-[#f8fafc] transition-colors">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 export default function VehicleDetailsPage() {
   const { vehicleId } = useParams()
@@ -287,11 +417,15 @@ export default function VehicleDetailsPage() {
   const [vehicle,        setVehicle]        = useState(null)
   const [inspections,    setInspections]    = useState([])
   const [inspTotal,      setInspTotal]      = useState(0)
+  const [fuelEntries,    setFuelEntries]    = useState([])
+  const [fuelTotal,      setFuelTotal]      = useState(0)
   const [loadingVehicle, setLoadingVehicle] = useState(true)
   const [loadingInsp,    setLoadingInsp]    = useState(true)
+  const [loadingFuel,    setLoadingFuel]    = useState(true)
   const [notFound,       setNotFound]       = useState(false)
   const [drawerOpen,     setDrawerOpen]     = useState(false)
   const [selectedInspId, setSelectedInspId] = useState(null)
+  const [selectedFuelId, setSelectedFuelId] = useState(null)
   const [assignedEmp,    setAssignedEmp]    = useState(undefined) // undefined=loading, null=none
 
   // ── Fetch vehicle ─────────────────────────────────────────────────────────
@@ -317,6 +451,17 @@ export default function VehicleDetailsPage() {
     setLoadingInsp(false)
   }, [vehicleId])
 
+  // ── Fetch fuel history ─────────────────────────────────────────────────────
+  const fetchFuelHistory = useCallback(async () => {
+    setLoadingFuel(true)
+    const { data, ok } = await apiFetch(`fleet/${vehicleId}/fuel-history/`)
+    if (ok && data) {
+      setFuelEntries(data.results ?? [])
+      setFuelTotal(data.count ?? (data.results ?? []).length)
+    }
+    setLoadingFuel(false)
+  }, [vehicleId])
+
   // ── Fetch assigned employee ────────────────────────────────────────────────
   useEffect(() => {
     apiFetch(`fleet/${vehicleId}/assigned-employee/`).then(({ data, ok }) => {
@@ -327,7 +472,8 @@ export default function VehicleDetailsPage() {
   useEffect(() => {
     fetchVehicle()
     fetchInspections()
-  }, [fetchVehicle, fetchInspections])
+    fetchFuelHistory()
+  }, [fetchVehicle, fetchInspections, fetchFuelHistory])
 
   // ── 404 ───────────────────────────────────────────────────────────────────
   if (notFound) {
@@ -371,6 +517,14 @@ export default function VehicleDetailsPage() {
         <InspectionDetailModal
           inspectionId={selectedInspId}
           onClose={() => setSelectedInspId(null)}
+        />
+      )}
+
+      {/* Fuel history detail modal */}
+      {selectedFuelId && (
+        <FuelHistoryDetailModal
+          fuelId={selectedFuelId}
+          onClose={() => setSelectedFuelId(null)}
         />
       )}
 
@@ -565,6 +719,63 @@ export default function VehicleDetailsPage() {
             </div>
           </Card>
         )}
+
+        {/* Fuel History */}
+        <div className="bg-white border border-[#e2e8f0] rounded-[14px] overflow-hidden shadow-[0px_1px_3px_rgba(0,0,0,0.07)]">
+          <div className="px-6 py-4 border-b border-[#f1f5f9]">
+            <h3 className="text-[#1d293d] font-bold text-[15px] leading-[22px]">Fuel History</h3>
+            <p className="text-[#90a1b9] text-[12px] mt-0.5">{fuelTotal} record{fuelTotal !== 1 ? 's' : ''} — click any row to view full detail</p>
+          </div>
+
+          {loadingFuel ? (
+            <Spinner />
+          ) : fuelEntries.length === 0 ? (
+            <div className="py-10 text-center text-[#90a1b9] text-[14px]">No fuel records yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px]">
+                <thead>
+                  <tr className="bg-[#f8fafc] border-b border-[#e2e8f0]">
+                    {['Date', 'Added By', 'Litres', 'Cost', 'Odometer', 'Notes', ''].map((col, i) => (
+                      <th key={i} className={`px-5 py-[11px] text-[12px] font-bold text-[#62748e] whitespace-nowrap text-left${i === 6 ? ' w-[32px]' : ''}`}>
+                        {col}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {fuelEntries.map(fuel => (
+                    <tr key={fuel.id}
+                      onClick={() => setSelectedFuelId(fuel.id)}
+                      className="border-b border-[#f8fafc] last:border-0 hover:bg-[#f0f4ff] transition-colors cursor-pointer">
+                      <td className="px-5 py-[14px] text-[13px] text-[#45556c] whitespace-nowrap">
+                        {fmtDate(fuel.date)}
+                      </td>
+                      <td className="px-5 py-[14px] text-[13px] text-[#314158] font-medium whitespace-nowrap">
+                        {fuel.added_by_name ?? '—'}
+                      </td>
+                      <td className="px-5 py-[14px] text-[13px] text-[#0f172b] font-semibold whitespace-nowrap">
+                        {fuel.litres ? `${Number(fuel.litres).toFixed(2)} L` : '—'}
+                      </td>
+                      <td className="px-5 py-[14px] text-[13px] text-[#0f172b] font-semibold whitespace-nowrap">
+                        {fuel.cost ? `$${Number(fuel.cost).toFixed(2)}` : '—'}
+                      </td>
+                      <td className="px-5 py-[14px] text-[13px] text-[#45556c] whitespace-nowrap">
+                        {fuel.odometer_km ? `${Number(fuel.odometer_km).toLocaleString()} km` : '—'}
+                      </td>
+                      <td className="px-5 py-[14px] text-[13px] text-[#62748e] whitespace-nowrap truncate max-w-[150px]">
+                        {fuel.notes ?? '—'}
+                      </td>
+                      <td className="px-3 py-[14px] text-[#90a1b9]">
+                        <IconChevronRight />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
 
         {/* Inspection History */}
         <div className="bg-white border border-[#e2e8f0] rounded-[14px] overflow-hidden shadow-[0px_1px_3px_rgba(0,0,0,0.07)]">
