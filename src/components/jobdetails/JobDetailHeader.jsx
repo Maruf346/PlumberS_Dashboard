@@ -14,22 +14,37 @@ function IconChevron()   { return <svg width="14" height="14" viewBox="0 0 14 14
 function IconCheck()     { return <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg> }
 
 const STATUS_DOT = {
-  'pending':     'bg-[#fe9a00]',
-  'in_progress': 'bg-[#1447e6]',
-  'completed':   'bg-[#007a55]',
-  'overdue':     'bg-[#c10007]',
+  'scheduled':          'bg-[#06b6d4]',
+  'pending':            'bg-[#8b5cf6]',
+  'in_progress':        'bg-[#16a34a]',
+  'on_hold':            'bg-[#f59e0b]',
+  'to_invoice':         'bg-[#fb7185]',
+  'completed':          'bg-[#6b7280]',
+  'cancelled':          'bg-[#7c3aed]',
+  'emergency_make_safe': 'bg-[#dc2626]',
+  'overdue':            'bg-[#b91c1c]',
 }
 const STATUS_PILL = {
-  'pending':     'bg-[#fff7ed] text-[#ca3500]',
-  'in_progress': 'bg-[#eff6ff] text-[#1447e6]',
-  'completed':   'bg-[#ecfdf5] text-[#007a55]',
-  'overdue':     'bg-[#fef2f2] text-[#c10007]',
+  'scheduled':          'bg-[#ecfeff] text-[#0c4a6e]',
+  'pending':            'bg-[#f5f3ff] text-[#6d28d9]',
+  'in_progress':        'bg-[#dcfce7] text-[#166534]',
+  'on_hold':            'bg-[#fef3c7] text-[#92400e]',
+  'to_invoice':         'bg-[#fde8ef] text-[#be185d]',
+  'completed':          'bg-[#f3f4f6] text-[#475569]',
+  'cancelled':          'bg-[#f3e8ff] text-[#6d28d9]',
+  'emergency_make_safe': 'bg-[#fee2e2] text-[#b91c1c]',
+  'overdue':            'bg-[#fef2f2] text-[#c10007]',
 }
 const STATUS_LABEL = {
-  'pending':     'Pending',
-  'in_progress': 'In Progress',
-  'completed':   'Completed',
-  'overdue':     'Overdue',
+  'scheduled':          'Scheduled',
+  'pending':            'To be booked',
+  'in_progress':        'In Progress',
+  'on_hold':            'On Hold',
+  'to_invoice':         'To Invoice',
+  'completed':          'Completed',
+  'cancelled':          'Cancelled',
+  'emergency_make_safe': 'Emergency Make Safe',
+  'overdue':            'Overdue',
 }
 const PRIORITY_STYLES = {
   'low':      'bg-[#f0fdf4] text-[#007a55] border border-[#d0fae5]',
@@ -41,10 +56,15 @@ const PRIORITY_LABEL = { low: 'Low', medium: 'Medium', high: 'High', critical: '
 
 // Status options with colours for the dropdown items
 const STATUS_OPTIONS = [
-  { value: 'pending',     label: 'Pending',     dot: 'bg-[#fe9a00]', text: 'text-[#ca3500]' },
-  { value: 'in_progress', label: 'In Progress', dot: 'bg-[#1447e6]', text: 'text-[#1447e6]' },
-  { value: 'completed',   label: 'Completed',   dot: 'bg-[#007a55]', text: 'text-[#007a55]' },
-  { value: 'overdue',     label: 'Overdue',     dot: 'bg-[#c10007]', text: 'text-[#c10007]' },
+  { value: 'scheduled',          label: 'Scheduled',          dot: 'bg-[#06b6d4]', text: 'text-[#0c4a6e]' },
+  { value: 'pending',            label: 'To be booked',       dot: 'bg-[#8b5cf6]', text: 'text-[#6d28d9]' },
+  { value: 'in_progress',        label: 'In Progress',        dot: 'bg-[#16a34a]', text: 'text-[#166534]' },
+  { value: 'on_hold',            label: 'On Hold',            dot: 'bg-[#f59e0b]', text: 'text-[#92400e]' },
+  { value: 'to_invoice',         label: 'To Invoice',         dot: 'bg-[#fb7185]', text: 'text-[#be185d]' },
+  { value: 'completed',          label: 'Completed',          dot: 'bg-[#6b7280]', text: 'text-[#475569]' },
+  { value: 'cancelled',          label: 'Cancelled',          dot: 'bg-[#7c3aed]', text: 'text-[#6d28d9]' },
+  { value: 'emergency_make_safe', label: 'Emergency Make Safe', dot: 'bg-[#dc2626]', text: 'text-[#b91c1c]' },
+  { value: 'overdue',            label: 'Overdue',            dot: 'bg-[#b91c1c]', text: 'text-[#c10007]' },
 ]
 
 // ── Status change dropdown ────────────────────────────────────────────────────
