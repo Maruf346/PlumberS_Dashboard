@@ -132,6 +132,13 @@ function InspectionDetailModal({ inspectionId, onClose }) {
   }, [inspectionId])
 
   // Trap scroll behind modal
+    // ── Fetch assigned employee ────────────────────────────────────────────────
+  useEffect(() => {
+    apiFetch(`fleet/${vehicleId}/assigned-employee/`).then(({ data, ok }) => {
+      setAssignedEmp(ok && data && data.employee_id ? data : null)
+    })
+  }, [vehicleId])
+
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
@@ -292,6 +299,7 @@ export default function VehicleDetailsPage() {
   const [notFound,       setNotFound]       = useState(false)
   const [drawerOpen,     setDrawerOpen]     = useState(false)
   const [selectedInspId, setSelectedInspId] = useState(null)
+  const [assignedEmp,    setAssignedEmp]    = useState(undefined) // undefined=loading, null=none
 
   // ── Fetch vehicle ─────────────────────────────────────────────────────────
   const fetchVehicle = useCallback(async () => {
@@ -428,6 +436,18 @@ export default function VehicleDetailsPage() {
                     Last inspection: {v.last_inspection_date ? fmtDate(v.last_inspection_date) : 'Never'}
                   </span>
                 </div>
+                <div className="flex items-center gap-1.5">
+                  <IconCalendar />
+                  <span className={`text-[13px] ${v.registration_due ? 'text-[#45556c]' : 'text-[#90a1b9] italic'}`}>
+                    Registration due: {v.registration_due ? fmtDate(v.registration_due) : 'Never'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <IconCalendar />
+                  <span className={`text-[13px] ${v.service_due ? 'text-[#45556c]' : 'text-[#90a1b9] italic'}`}>
+                    Service due: {v.service_due ? fmtDate(v.service_due) : 'Never'}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -444,6 +464,60 @@ export default function VehicleDetailsPage() {
               <ServiceBar current={v.current_odometer_km} next={v.next_service_km} />
             </div>
           )}
+
+          {/* Assigned Employee */}
+          <div className="mt-5 pt-5 border-t border-[#f1f5f9]">
+            <p className="text-[11px] font-bold text-[#90a1b9] uppercase tracking-[0.5px] mb-3">Assigned Employee</p>
+            {assignedEmp === undefined ? (
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full border-2 border-[#e2e8f0] border-t-[#f54900] animate-spin"/>
+                <span className="text-[13px] text-[#90a1b9]">Loading…</span>
+              </div>
+            ) : assignedEmp === null ? (
+              <div className="flex items-center gap-3 px-4 py-3 bg-[#f8fafc] border border-dashed border-[#e2e8f0] rounded-[10px]">
+                <div className="w-9 h-9 rounded-full bg-[#e2e8f0] flex items-center justify-center shrink-0">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="6" r="3" stroke="#90a1b9" strokeWidth="1.2"/><path d="M2.5 16c0-3.314 2.91-6 6.5-6s6.5 2.686 6.5 6" stroke="#90a1b9" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                </div>
+                <div>
+                  <p className="text-[13px] font-semibold text-[#62748e]">No employee assigned</p>
+                  <p className="text-[12px] text-[#90a1b9]">Assign via the employee's profile page</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-3">
+                  {assignedEmp.profile_picture ? (
+                    <img src={assignedEmp.profile_picture} alt={assignedEmp.full_name}
+                      className="w-10 h-10 rounded-full object-cover border-2 border-[#e2e8f0] shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-[#0f172b] flex items-center justify-center text-white text-[12px] font-bold shrink-0 select-none">
+                      {assignedEmp.full_name?.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase() ?? '??'}
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-[#0f172b] font-bold text-[15px] leading-[20px]">{assignedEmp.full_name}</p>
+                    <div className="flex items-center gap-3 flex-wrap mt-0.5">
+                      {assignedEmp.primary_skill && (
+                        <span className="text-[12px] text-[#62748e] capitalize">{assignedEmp.primary_skill.replace(/_/g,' ')}</span>
+                      )}
+                      {assignedEmp.email && (
+                        <span className="text-[12px] text-[#90a1b9]">{assignedEmp.email}</span>
+                      )}
+                      {assignedEmp.phone && (
+                        <span className="text-[12px] text-[#90a1b9]">{assignedEmp.phone}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <a href={`/admin/staff/${assignedEmp.employee_id}`}
+                  onClick={e => { e.preventDefault(); navigate(`/admin/staff/${assignedEmp.employee_id}`) }}
+                  className="flex items-center gap-1.5 px-3 py-[6px] rounded-[8px] border border-[#e2e8f0] bg-white hover:bg-[#f8fafc] text-[#314158] text-[12px] font-medium transition-colors whitespace-nowrap shrink-0">
+                  View Profile
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M5 3l4 3-4 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </a>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Two-column detail row */}
