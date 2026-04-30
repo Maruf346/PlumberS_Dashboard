@@ -50,3 +50,28 @@ export async function apiFetch(endpoint, options = {}) {
 
   return { data, ok: res.ok, status: res.status }
 }
+
+// ── Resolve image URL to absolute URL ─────────────────────────────────────────
+// Convert relative image paths (/media/...) to absolute URLs using API base domain
+// Handles both relative paths and already-absolute URLs
+export function resolveImageUrl(imageUrl) {
+  if (!imageUrl) return null
+  
+  // Already absolute URL
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl
+  }
+  
+  // Relative path — extract base domain from API URL and prepend
+  if (imageUrl.startsWith('/')) {
+    try {
+      const url = new URL(BASE)
+      return `${url.origin}${imageUrl}`
+    } catch {
+      // Fallback if BASE is invalid
+      return imageUrl
+    }
+  }
+  
+  return imageUrl
+}

@@ -13,7 +13,7 @@ import { useParams, useNavigate, Link }     from 'react-router-dom'
 import PersonAvatar      from '@/components/shared/PersonAvatar'
 import PeopleStatusBadge from '@/components/shared/PeopleStatusBadge'
 import DeletePersonModal from '@/components/people/DeletePersonModal'
-import { apiFetch }      from '@/utils/apiFetch'
+import { apiFetch, resolveImageUrl }      from '@/utils/apiFetch'
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 function IconArrowLeft()  { return <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12.5 15L7.5 10l5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg> }
@@ -288,7 +288,7 @@ function VehicleAssignCard({ staffId }) {
 
             {/* Vehicle image or placeholder */}
             {vehicle.picture ? (
-              <img src={vehicle.picture} alt={vehicle.name}
+              <img src={resolveImageUrl(vehicle.picture)} alt={vehicle.name}
                 className="w-[100px] h-[72px] rounded-[10px] object-cover border border-[#e2e8f0] shrink-0" />
             ) : (
               <div className="w-[100px] h-[72px] rounded-[10px] bg-[#f8fafc] border border-[#e2e8f0] flex items-center justify-center shrink-0">
@@ -423,7 +423,7 @@ function VehicleAssignCard({ staffId }) {
                       : 'border-[#e2e8f0] bg-white hover:bg-[#f8fafc]'
                   }`}>
                   {v.picture ? (
-                    <img src={v.picture} alt={v.name} className="w-10 h-8 rounded-[6px] object-cover shrink-0 border border-[#e2e8f0]"/>
+                    <img src={resolveImageUrl(v.picture)} alt={v.name} className="w-10 h-8 rounded-[6px] object-cover shrink-0 border border-[#e2e8f0]"/>
                   ) : (
                     <div className="w-10 h-8 rounded-[6px] bg-[#f8fafc] border border-[#e2e8f0] flex items-center justify-center shrink-0">
                       <IconTruck />
