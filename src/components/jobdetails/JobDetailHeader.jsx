@@ -136,7 +136,7 @@ function StatusDropdown({ jobId, currentStatus, onStatusChange }) {
 
       {/* Dropdown */}
       {open && !isSaving && (
-        <div className="absolute right-0 top-[38px] z-50 w-[168px] bg-white border border-[#e2e8f0] rounded-[10px] shadow-[0px_8px_24px_rgba(15,23,43,0.12)] py-1 overflow-hidden">
+        <div className="absolute right-0 top-[38px] z-[100] min-w-[220px] bg-white border border-[#e2e8f0] rounded-[10px] shadow-[0px_8px_24px_rgba(15,23,43,0.12)] py-1 overflow-hidden">
           <p className="px-3 pt-2 pb-1 text-[11px] font-bold text-[#90a1b9] uppercase tracking-[0.5px]">
             Set Status
           </p>
@@ -150,7 +150,7 @@ function StatusDropdown({ jobId, currentStatus, onStatusChange }) {
                   : 'hover:bg-[#f8fafc]'
               }`}
             >
-              <span className={`flex items-center gap-2 ${opt.text}`}>
+              <span className={`flex items-center gap-2 ${opt.text} whitespace-nowrap`}>
                 <span className={`w-2 h-2 rounded-full shrink-0 ${opt.dot}`} />
                 {opt.label}
               </span>
