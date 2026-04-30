@@ -132,13 +132,6 @@ function InspectionDetailModal({ inspectionId, onClose }) {
   }, [inspectionId])
 
   // Trap scroll behind modal
-    // ── Fetch assigned employee ────────────────────────────────────────────────
-  useEffect(() => {
-    apiFetch(`fleet/${vehicleId}/assigned-employee/`).then(({ data, ok }) => {
-      setAssignedEmp(ok && data && data.employee_id ? data : null)
-    })
-  }, [vehicleId])
-
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
@@ -322,6 +315,13 @@ export default function VehicleDetailsPage() {
       setInspTotal(data.count ?? (data.results ?? []).length)
     }
     setLoadingInsp(false)
+  }, [vehicleId])
+
+  // ── Fetch assigned employee ────────────────────────────────────────────────
+  useEffect(() => {
+    apiFetch(`fleet/${vehicleId}/assigned-employee/`).then(({ data, ok }) => {
+      setAssignedEmp(ok && data && data.employee_id ? data : null)
+    })
   }, [vehicleId])
 
   useEffect(() => {
