@@ -28,9 +28,9 @@ function fmtDt(iso) {
 function ActivityItem({ item, isLast }) {
   const dotColor = ACTIVITY_COLORS[item.activity_type] ?? 'bg-[#cad5e2]'
   return (
-    <div className="flex items-start gap-4 pb-5 last:pb-0 relative">
+    <div className="flex items-start gap-4 pb-5 last:pb-0 relative overflow-hidden">
       {!isLast && <div className="absolute left-[19px] top-[40px] bottom-0 w-px bg-[#e2e8f0]" />}
-      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 z-10 ${dotColor}`}>
+      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${dotColor}`}>
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
           <circle cx="5" cy="5" r="3" fill="white" fillOpacity="0.9"/>
         </svg>
