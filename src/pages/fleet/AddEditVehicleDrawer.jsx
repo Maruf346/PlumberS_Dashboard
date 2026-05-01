@@ -118,6 +118,8 @@ export default function AddEditVehicleDrawer({ mode = 'add', initialData = null,
     year:                initialData?.year                ? String(initialData.year) : '',
     notes:               initialData?.notes               ?? '',
     is_active:           initialData?.is_active           ?? true,
+    registration_due:    initialData?.registration_due    ?? '',
+    service_due:         initialData?.service_due         ?? '',
   })
 
   const set = (field) => (value) => setForm(prev => ({ ...prev, [field]: value }))
@@ -175,6 +177,8 @@ export default function AddEditVehicleDrawer({ mode = 'add', initialData = null,
     if (form.next_service_km !== '')     fd.append('next_service_km',     form.next_service_km)
     if (form.notes)      fd.append('notes',      form.notes.trim())
     fd.append('is_active', String(form.is_active))
+    if (form.registration_due) fd.append('registration_due', form.registration_due)
+    if (form.service_due)      fd.append('service_due',      form.service_due)
 
     // Only send picture if user selected a new file
     if (picFile) fd.append('picture', picFile)
@@ -341,6 +345,44 @@ export default function AddEditVehicleDrawer({ mode = 'add', initialData = null,
               placeholder='e.g. 50000' icon={IconWrench} error={errors.next_service_km}
               hint='Odometer reading at which next service is due' />
             <OdometerBar current={currentOdo} next={nextSvcKm} />
+
+            {/* Registration & Service due dates */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-[6px]">
+                <label htmlFor="registration_due" className="text-[#0f172b] text-[14px] font-semibold leading-[20px]">
+                  Registration Due
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><IconCalendar /></span>
+                  <input
+                    type="date"
+                    id="registration_due"
+                    value={form.registration_due}
+                    onChange={e => set('registration_due')(e.target.value)}
+                    className="w-full h-[38px] rounded-[8px] border border-[#e2e8f0] bg-white text-[14px] text-[#0f172b] pl-9 pr-3 focus:outline-none focus:ring-2 focus:ring-[#f54900]/25 focus:border-[#f54900]/60 transition-colors"
+                  />
+                </div>
+                <p className="text-[#90a1b9] text-[11px] leading-[16px]">Vehicle registration expiry</p>
+              </div>
+
+              <div className="flex flex-col gap-[6px]">
+                <label htmlFor="service_due" className="text-[#0f172b] text-[14px] font-semibold leading-[20px]">
+                  Service Due Date
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><IconCalendar /></span>
+                  <input
+                    type="date"
+                    id="service_due"
+                    value={form.service_due}
+                    onChange={e => set('service_due')(e.target.value)}
+                    className="w-full h-[38px] rounded-[8px] border border-[#e2e8f0] bg-white text-[14px] text-[#0f172b] pl-9 pr-3 focus:outline-none focus:ring-2 focus:ring-[#f54900]/25 focus:border-[#f54900]/60 transition-colors"
+                  />
+                </div>
+                <p className="text-[#90a1b9] text-[11px] leading-[16px]">Next scheduled service date</p>
+              </div>
+            </div>
+
             <div className="flex items-start gap-2.5 p-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-[8px]">
               <IconInfo />
               <p className="text-[#62748e] text-[12px] leading-[18px]">

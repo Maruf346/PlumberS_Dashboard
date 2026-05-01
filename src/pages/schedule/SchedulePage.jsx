@@ -46,6 +46,9 @@ function mapJob(j) {
     client:         j.client_name ?? j.client?.name ?? '—',
     priority:       j.priority ? j.priority.charAt(0).toUpperCase() + j.priority.slice(1) : 'Low',
     status:         apiStatusToDisplay(j.status),
+    rawStatus:      j.status,           // keep raw status for color mapping
+    employeeName:   j.assigned_to?.full_name ?? 'Unassigned',
+    employeeId:     j.assigned_to?.id ?? null,
     scheduledDate:  parsed ? { year: parsed.year, month: parsed.month, day: parsed.day } : null,
     scheduledTime:  parsed?.time ?? '09:00',
     _isScheduled:   !!parsed,
@@ -54,18 +57,52 @@ function mapJob(j) {
 }
 
 function apiStatusToDisplay(s) {
-  const map = { pending: 'Pending', in_progress: 'In Progress', completed: 'Completed', overdue: 'Overdue' }
+  const map = {
+    pending:            'To be booked',
+    scheduled:          'Scheduled',
+    in_progress:        'In Progress',
+    on_hold:            'On Hold',
+    to_invoice:         'To Invoice',
+    completed:          'Completed',
+    cancelled:          'Cancelled',
+    emergency_make_safe: 'Emergency Make Safe',
+    overdue:            'Overdue',
+  }
   return map[s] ?? s ?? 'Pending'
 }
 
 // ── Status → chip colour map ───────────────────────────────────────────────────
 const STATUS_CHIP = {
-  'Pending':     { bg: 'bg-[#eff6ff]', border: 'border-[#bfdbfe]', text: 'text-[#1d4ed8]', dot: 'bg-[#3b82f6]', time: 'text-[#3b82f6]' },
-  'In Progress': { bg: 'bg-[#fff7ed]', border: 'border-[#fed7aa]', text: 'text-[#c73b00]', dot: 'bg-[#f54900]', time: 'text-[#f54900]' },
-  'Completed':   { bg: 'bg-[#ecfdf5]', border: 'border-[#bbf7d0]', text: 'text-[#007a55]', dot: 'bg-[#10b981]', time: 'text-[#10b981]' },
-  'Overdue':     { bg: 'bg-[#fef2f2]', border: 'border-[#fecaca]', text: 'text-[#c10007]', dot: 'bg-[#ef4444]', time: 'text-[#ef4444]' },
+  'To be booked':   { bg: 'bg-[#f5f3ff]', border: 'border-[#e9d5ff]', text: 'text-[#6d28d9]', dot: 'bg-[#8b5cf6]' },
+  'Scheduled':      { bg: 'bg-[#ecfeff]', border: 'border-[#cffafe]', text: 'text-[#0c4a6e]', dot: 'bg-[#06b6d4]' },
+  'In Progress':    { bg: 'bg-[#dcfce7]', border: 'border-[#bbf7d0]', text: 'text-[#166534]', dot: 'bg-[#16a34a]' },
+  'On Hold':        { bg: 'bg-[#fef3c7]', border: 'border-[#fde68a]', text: 'text-[#92400e]', dot: 'bg-[#f59e0b]' },
+  'To Invoice':     { bg: 'bg-[#fde8ef]', border: 'border-[#fbcfe8]', text: 'text-[#be185d]', dot: 'bg-[#fb7185]' },
+  'Completed':      { bg: 'bg-[#f3f4f6]', border: 'border-[#e5e7eb]', text: 'text-[#475569]', dot: 'bg-[#6b7280]' },
+  'Cancelled':      { bg: 'bg-[#f3e8ff]', border: 'border-[#e9d5ff]', text: 'text-[#6d28d9]', dot: 'bg-[#7c3aed]' },
+  'Emergency Make Safe': { bg: 'bg-[#fee2e2]', border: 'border-[#fecaca]', text: 'text-[#b91c1c]', dot: 'bg-[#dc2626]' },
+  'Overdue':        { bg: 'bg-[#fef2f2]', border: 'border-[#fecaca]', text: 'text-[#c10007]', dot: 'bg-[#b91c1c]' },
 }
 const DEFAULT_CHIP = { bg: 'bg-[#f8fafc]', border: 'border-[#e2e8f0]', text: 'text-[#314158]', dot: 'bg-[#90a1b9]', time: 'text-[#90a1b9]' }
+
+// ── Employee color palette ─────────────────────────────────────────────────────
+const EMPLOYEE_COLORS = [
+  'bg-[#dbeafe] border-[#3b82f6]',  // blue
+  'bg-[#fee2e2] border-[#f54900]',  // orange
+  'bg-[#ede9fe] border-[#8b5cf6]',  // purple
+  'bg-[#cffafe] border-[#06b6d4]',  // cyan
+  'bg-[#d1fae5] border-[#10b981]',  // emerald
+  'bg-[#fef3c7] border-[#f59e0b]',  // amber
+  'bg-[#fce7f3] border-[#ec4899]',  // pink
+  'bg-[#e0e7ff] border-[#6366f1]',  // indigo
+]
+
+function getEmployeeColor(employeeId) {
+  if (!employeeId) return 'bg-[#f3f4f6] border-[#d1d5db]' // gray for unassigned
+  const hash = employeeId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  const idx = hash % EMPLOYEE_COLORS.length
+  return EMPLOYEE_COLORS[idx]
+}
 
 // ── Priority badge colours ─────────────────────────────────────────────────────
 const PRIORITY_COLOR = {
@@ -130,18 +167,27 @@ function TimePickerModal({ job, date, saving, onConfirm, onCancel }) {
 
 // ── Job chip (on calendar) ────────────────────────────────────────────────────
 function JobChip({ job, onDragStart, onClick }) {
-  const c = STATUS_CHIP[job.status] ?? DEFAULT_CHIP
+  const statusConfig = STATUS_CHIP[job.status] ?? DEFAULT_CHIP
+  const employeeColor = getEmployeeColor(job.employeeId)
   return (
     <div
       draggable
       onDragStart={e => { e.stopPropagation(); onDragStart(e, job) }}
       onClick={e => { e.stopPropagation(); onClick(job) }}
-      className={`flex flex-col px-2 py-1.5 rounded-[6px] border cursor-grab active:cursor-grabbing hover:brightness-95 transition-all select-none ${c.bg} ${c.border}`}
+      className={`flex flex-col gap-2 p-2 rounded-[14px] border cursor-grab active:cursor-grabbing hover:brightness-95 transition-all select-none ${employeeColor}`}
     >
-      <span className={`text-[11px] font-bold leading-[15px] truncate ${c.text}`}>
-        {job.job_id}: {job.client}
-      </span>
-      <span className={`flex items-center gap-1 text-[10px] mt-0.5 ${c.time}`}>
+      <div className="flex items-center justify-between gap-2">
+        <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-white/90 ${statusConfig.border} ${statusConfig.text}`}>
+          {job.job_id}
+        </span>
+        <span className="text-[10px] font-semibold text-[#334155] truncate">
+          {job.employeeName}
+        </span>
+      </div>
+      <p className="text-[12px] font-semibold text-[#0f172b] leading-[15px] truncate">
+        {job.client}
+      </p>
+      <span className="flex items-center gap-1 text-[10px] text-[#475569]">
         <IconClock /> {job.scheduledTime}
       </span>
     </div>
@@ -247,6 +293,20 @@ export default function SchedulePage() {
       j.scheduledDate?.month === month &&
       j.scheduledDate?.day   === day
     ).sort((a, b) => (a.scheduledTime > b.scheduledTime ? 1 : -1))
+
+  const groupJobsByTime = (jobsList) => {
+    const groups = jobsList.reduce((acc, job) => {
+      const time = job.scheduledTime || '09:00'
+      acc[time] = acc[time] || []
+      acc[time].push(job)
+      return acc
+    }, {})
+
+    return Object.keys(groups).sort().map(time => ({
+      time,
+      jobs: groups[time],
+    }))
+  }
 
   // ── Calendar grid ──────────────────────────────────────────────────────────
   const firstDay   = firstDayOfMonth(viewYear, viewMonth)
@@ -424,7 +484,7 @@ export default function SchedulePage() {
             </div>
 
             <div className="flex items-center gap-3 shrink-0">
-              {/* Month/Week/Day toggle */}
+              {/* Month/Week/Day toggle 
               <div className="flex items-center bg-white border border-[#e2e8f0] rounded-[10px] p-[3px]">
                 {['month','week','day'].map(mode => (
                   <button key={mode} onClick={() => setViewMode(mode)}
@@ -437,6 +497,7 @@ export default function SchedulePage() {
                   </button>
                 ))}
               </div>
+              */}
 
               {/* Month navigation */}
               <div className="flex items-center gap-1 bg-white border border-[#e2e8f0] rounded-[10px] px-2 py-[5px]">
@@ -516,15 +577,22 @@ export default function SchedulePage() {
                             )}
                           </div>
 
-                          {/* Job chips — max 3 visible */}
-                          {dayJobs.slice(0, 3).map(j => (
-                            <JobChip
-                              key={j.id}
-                              job={j}
-                              onDragStart={handleDragStart}
-                              onClick={handleChipClick}
-                            />
-                          ))}
+                          {/* Job chips — max 3 visible, same-time groups display side-by-side */}
+                          {groupJobsByTime(dayJobs.slice(0, 3)).map(group => {
+                            const cols = group.jobs.length === 2 ? 'grid-cols-2' : group.jobs.length >= 3 ? 'grid-cols-3' : 'grid-cols-1'
+                            return (
+                              <div key={group.time} className={`grid gap-1 ${cols}`}>
+                                {group.jobs.map(job => (
+                                  <JobChip
+                                    key={job.id}
+                                    job={job}
+                                    onDragStart={handleDragStart}
+                                    onClick={handleChipClick}
+                                  />
+                                ))}
+                              </div>
+                            )
+                          })}
                           {dayJobs.length > 3 && (
                             <span className="text-[10px] text-[#90a1b9] font-medium px-1">
                               +{dayJobs.length - 3} more
