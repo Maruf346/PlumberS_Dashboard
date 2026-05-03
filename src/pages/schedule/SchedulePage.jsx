@@ -73,15 +73,15 @@ function apiStatusToDisplay(s) {
 
 // ── Status → chip colour map ───────────────────────────────────────────────────
 const STATUS_CHIP = {
-  'To be booked':   { bg: 'bg-[#f5f3ff]', border: 'border-[#e9d5ff]', text: 'text-[#6d28d9]', dot: 'bg-[#8b5cf6]' },
-  'Scheduled':      { bg: 'bg-[#ecfeff]', border: 'border-[#cffafe]', text: 'text-[#0c4a6e]', dot: 'bg-[#06b6d4]' },
-  'In Progress':    { bg: 'bg-[#dcfce7]', border: 'border-[#bbf7d0]', text: 'text-[#166534]', dot: 'bg-[#16a34a]' },
-  'On Hold':        { bg: 'bg-[#fef3c7]', border: 'border-[#fde68a]', text: 'text-[#92400e]', dot: 'bg-[#f59e0b]' },
-  'To Invoice':     { bg: 'bg-[#fde8ef]', border: 'border-[#fbcfe8]', text: 'text-[#be185d]', dot: 'bg-[#fb7185]' },
-  'Completed':      { bg: 'bg-[#f3f4f6]', border: 'border-[#e5e7eb]', text: 'text-[#475569]', dot: 'bg-[#6b7280]' },
-  'Cancelled':      { bg: 'bg-[#f3e8ff]', border: 'border-[#e9d5ff]', text: 'text-[#6d28d9]', dot: 'bg-[#7c3aed]' },
-  'Emergency Make Safe': { bg: 'bg-[#fee2e2]', border: 'border-[#fecaca]', text: 'text-[#b91c1c]', dot: 'bg-[#dc2626]' },
-  'Overdue':        { bg: 'bg-[#fef2f2]', border: 'border-[#fecaca]', text: 'text-[#c10007]', dot: 'bg-[#b91c1c]' },
+  'To be booked':   { bg: 'bg-[#e0d7ff]', border: 'border-[#c4b5fd]', text: 'text-[#5b21b6]', dot: 'bg-[#7c3aed]' },
+  'Scheduled':      { bg: 'bg-[#c7f9ff]', border: 'border-[#7dd3fc]', text: 'text-[#0f172a]', dot: 'bg-[#0891b2]' },
+  'In Progress':    { bg: 'bg-[#bbf7d0]', border: 'border-[#86efac]', text: 'text-[#14532d]', dot: 'bg-[#16a34a]' },
+  'On Hold':        { bg: 'bg-[#fde68a]', border: 'border-[#facc15]', text: 'text-[#92400e]', dot: 'bg-[#f59e0b]' },
+  'To Invoice':     { bg: 'bg-[#fecdd3]', border: 'border-[#fb7185]', text: 'text-[#9d174d]', dot: 'bg-[#be185d]' },
+  'Completed':      { bg: 'bg-[#d6d9dc]', border: 'border-[#94a3b8]', text: 'text-[#334155]', dot: 'bg-[#475569]' },
+  'Cancelled':      { bg: 'bg-[#ddd6fe]', border: 'border-[#c4b5fd]', text: 'text-[#5b21b6]', dot: 'bg-[#7c3aed]' },
+  'Emergency Make Safe': { bg: 'bg-[#fecaca]', border: 'border-[#f87171]', text: 'text-[#991b1b]', dot: 'bg-[#dc2626]' },
+  'Overdue':        { bg: 'bg-[#fecaca]', border: 'border-[#f87171]', text: 'text-[#991b1b]', dot: 'bg-[#b91c1c]' },
 }
 const DEFAULT_CHIP = { bg: 'bg-[#f8fafc]', border: 'border-[#e2e8f0]', text: 'text-[#314158]', dot: 'bg-[#90a1b9]', time: 'text-[#90a1b9]' }
 
