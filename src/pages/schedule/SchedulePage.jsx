@@ -99,6 +99,19 @@ const EMPLOYEE_COLORS = [
   { bg: 'bg-[#fde68a]', border: 'border-[#d97706]' },  // yellow
   { bg: 'bg-[#d9f99d]', border: 'border-[#4d7c0f]' },  // lime
   { bg: 'bg-[#f8fafc]', border: 'border-[#94a3b8]' },  // slate
+
+  { bg: 'bg-[#f3e8ff]', border: 'border-[#a855f7]' },  // lavender
+  { bg: 'bg-[#e0f2fe]', border: 'border-[#0284c7]' },  // sky
+  { bg: 'bg-[#fff7ed]', border: 'border-[#ea580c]' },  // apricot
+  { bg: 'bg-[#ffedd5]', border: 'border-[#d97706]' },  // peach
+  { bg: 'bg-[#fdf2f8]', border: 'border-[#c026d3]' },  // mauve
+  { bg: 'bg-[#ecfccb]', border: 'border-[#65a30d]' },  // green
+  { bg: 'bg-[#eff6ff]', border: 'border-[#2563eb]' },  // denim
+  { bg: 'bg-[#ede9fe]', border: 'border-[#7c3aed]' },  // violet
+  { bg: 'bg-[#fff1f2]', border: 'border-[#be123c]' },  // rose
+  { bg: 'bg-[#f8fafc]', border: 'border-[#0f172a]' },  // charcoal
+  { bg: 'bg-[#fef2f2]', border: 'border-[#b91c1c]' },  // coral
+  { bg: 'bg-[#ecfdf5]', border: 'border-[#047857]' },  // mint
 ]
 
 function getEmployeeColor(employeeId) {
