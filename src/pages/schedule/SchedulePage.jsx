@@ -337,6 +337,7 @@ export default function SchedulePage() {
   // ── Calendar view state ────────────────────────────────────────────────────
   const [viewYear,  setViewYear]  = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())
+  const [viewDay,   setViewDay]   = useState(today.getDate())
   const [viewMode,  setViewMode]  = useState('month')
 
   // ── Jobs state ─────────────────────────────────────────────────────────────
@@ -397,19 +398,38 @@ export default function SchedulePage() {
     else setViewMonth(m => m + 1)
   }
 
-  // For week/day views, we navigate by date instead
-  const prevWeekOrDay = () => {
-    const d = new Date(viewYear, viewMonth, 1)
-    d.setDate(d.getDate() - (viewMode === 'week' ? 7 : 1))
-    setViewYear(d.getFullYear())
-    setViewMonth(d.getMonth())
+  const prevView = () => {
+    if (viewMode === 'month') {
+      prevMonth()
+    } else if (viewMode === 'week') {
+      const currentStart = getWeekStart(viewYear, viewMonth, viewDay)
+      currentStart.setDate(currentStart.getDate() - 7)
+      setViewYear(currentStart.getFullYear())
+      setViewMonth(currentStart.getMonth())
+      setViewDay(currentStart.getDate())
+    } else { // day
+      const d = new Date(viewYear, viewMonth, viewDay - 1)
+      setViewYear(d.getFullYear())
+      setViewMonth(d.getMonth())
+      setViewDay(d.getDate())
+    }
   }
 
-  const nextWeekOrDay = () => {
-    const d = new Date(viewYear, viewMonth, 1)
-    d.setDate(d.getDate() + (viewMode === 'week' ? 7 : 1))
-    setViewYear(d.getFullYear())
-    setViewMonth(d.getMonth())
+  const nextView = () => {
+    if (viewMode === 'month') {
+      nextMonth()
+    } else if (viewMode === 'week') {
+      const currentStart = getWeekStart(viewYear, viewMonth, viewDay)
+      currentStart.setDate(currentStart.getDate() + 7)
+      setViewYear(currentStart.getFullYear())
+      setViewMonth(currentStart.getMonth())
+      setViewDay(currentStart.getDate())
+    } else { // day
+      const d = new Date(viewYear, viewMonth, viewDay + 1)
+      setViewYear(d.getFullYear())
+      setViewMonth(d.getMonth())
+      setViewDay(d.getDate())
+    }
   }
 
   // Helper: get week start (Sunday) from a date
@@ -424,10 +444,10 @@ export default function SchedulePage() {
   const getViewLabel = () => {
     if (viewMode === 'month') return `${MONTHS[viewMonth]} ${viewYear}`
     if (viewMode === 'week') {
-      const ws = getWeekStart(viewYear, viewMonth, 1)
+      const ws = getWeekStart(viewYear, viewMonth, viewDay)
       return `Week of ${MONTHS[ws.getMonth()]} ${ws.getDate()}`
     }
-    return `${MONTHS[viewMonth]} ${viewYear === today.getFullYear() ? '' : viewYear}`
+    return `${MONTHS[viewMonth]} ${viewDay}, ${viewYear}`
   }
 
   // ── Derived data ───────────────────────────────────────────────────────────
@@ -481,7 +501,7 @@ export default function SchedulePage() {
     for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7))
   } else if (viewMode === 'week') {
     // Week view — show 7 consecutive days from week start
-    const ws = getWeekStart(viewYear, viewMonth, 1)
+    const ws = getWeekStart(viewYear, viewMonth, viewDay)
     const cells = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(ws)
       d.setDate(d.getDate() + i)
@@ -495,7 +515,7 @@ export default function SchedulePage() {
     rows = [cells]
   } else {
     // Day view — show single day
-    rows = [[{ day: 1, month: viewMonth, year: viewYear, current: true }]]
+    rows = [[{ day: viewDay, month: viewMonth, year: viewYear, current: true }]]
   }
 
   const isToday = (year, month, day) =>
@@ -597,49 +617,51 @@ export default function SchedulePage() {
       <div className="flex gap-0 min-h-full">
 
         {/* ── LEFT: Unscheduled jobs panel ── */}
-        <div
-          className={[
-            'w-[220px] shrink-0 border-r flex flex-col transition-colors duration-100',
-            dragOverPanel ? 'bg-[#fff4ee] border-[#f54900]/30' : 'bg-white border-[#e2e8f0]',
-          ].join(' ')}
-          onDragOver={handlePanelDragOver}
-          onDragLeave={handlePanelDragLeave}
-          onDrop={handlePanelDrop}
-        >
-          <div className="px-4 py-4 border-b border-[#f1f5f9]">
-            <div className="flex items-center gap-2">
-              <span className="text-[#62748e]"><IconBriefcase /></span>
-              <h3 className="text-[#0f172b] font-bold text-[13px]">Unscheduled</h3>
-              <span className="ml-auto text-[11px] font-bold text-white bg-[#f54900] rounded-full w-5 h-5 flex items-center justify-center shrink-0">
-                {unscheduled.length}
-              </span>
+        {viewMode === 'month' && (
+          <div
+            className={[
+              'w-[220px] shrink-0 border-r flex flex-col transition-colors duration-100',
+              dragOverPanel ? 'bg-[#fff4ee] border-[#f54900]/30' : 'bg-white border-[#e2e8f0]',
+            ].join(' ')}
+            onDragOver={handlePanelDragOver}
+            onDragLeave={handlePanelDragLeave}
+            onDrop={handlePanelDrop}
+          >
+            <div className="px-4 py-4 border-b border-[#f1f5f9]">
+              <div className="flex items-center gap-2">
+                <span className="text-[#62748e]"><IconBriefcase /></span>
+                <h3 className="text-[#0f172b] font-bold text-[13px]">Unscheduled</h3>
+                <span className="ml-auto text-[11px] font-bold text-white bg-[#f54900] rounded-full w-5 h-5 flex items-center justify-center shrink-0">
+                  {unscheduled.length}
+                </span>
+              </div>
+              <p className="text-[#90a1b9] text-[11px] mt-1 leading-[16px]">
+                {dragOverPanel
+                  ? 'Release to unschedule'
+                  : 'Drag a job here to unschedule · Drag onto calendar to schedule'}
+              </p>
             </div>
-            <p className="text-[#90a1b9] text-[11px] mt-1 leading-[16px]">
-              {dragOverPanel
-                ? 'Release to unschedule'
-                : 'Drag a job here to unschedule · Drag onto calendar to schedule'}
-            </p>
-          </div>
 
-          <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <div className="w-5 h-5 rounded-full border-2 border-[#e2e8f0] border-t-[#f54900] animate-spin"/>
-              </div>
-            ) : dragOverPanel ? (
-              <div className="flex items-center justify-center h-12 rounded-[8px] border-2 border-dashed border-[#f54900]/50 text-[#f54900] text-[11px] font-semibold">
-                Drop to unschedule
-              </div>
-            ) : unscheduled.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
-                <span className="text-[#e2e8f0]"><IconCalPlus /></span>
-                <p className="text-[#cad5e2] text-[12px]">All jobs scheduled</p>
-              </div>
-            ) : unscheduled.map(job => (
-              <UnscheduledRow key={job.id} job={job} onDragStart={handleDragStart} />
-            ))}
+            <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <div className="w-5 h-5 rounded-full border-2 border-[#e2e8f0] border-t-[#f54900] animate-spin"/>
+                </div>
+              ) : dragOverPanel ? (
+                <div className="flex items-center justify-center h-12 rounded-[8px] border-2 border-dashed border-[#f54900]/50 text-[#f54900] text-[11px] font-semibold">
+                  Drop to unschedule
+                </div>
+              ) : unscheduled.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
+                  <span className="text-[#e2e8f0]"><IconCalPlus /></span>
+                  <p className="text-[#cad5e2] text-[12px]">All jobs scheduled</p>
+                </div>
+              ) : unscheduled.map(job => (
+                <UnscheduledRow key={job.id} job={job} onDragStart={handleDragStart} />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ── RIGHT: Calendar ── */}
         <div className="flex-1 min-w-0 flex flex-col p-6 gap-5">
@@ -668,14 +690,14 @@ export default function SchedulePage() {
 
               {/* Month navigation */}
               <div className="flex items-center gap-1 bg-white border border-[#e2e8f0] rounded-[10px] px-2 py-[5px]">
-                <button onClick={viewMode === 'month' ? prevMonth : prevWeekOrDay}
+                <button onClick={prevView}
                   className="w-7 h-7 flex items-center justify-center rounded-[6px] text-[#314158] hover:bg-[#f8fafc] transition-colors">
                   <IconChevLeft />
                 </button>
                 <span className="text-[#0f172b] font-bold text-[14px] w-[130px] text-center select-none">
                   {getViewLabel()}
                 </span>
-                <button onClick={viewMode === 'month' ? nextMonth : nextWeekOrDay}
+                <button onClick={nextView}
                   className="w-7 h-7 flex items-center justify-center rounded-[6px] text-[#314158] hover:bg-[#f8fafc] transition-colors">
                   <IconChevRight />
                 </button>
@@ -706,7 +728,7 @@ export default function SchedulePage() {
             ) : (
               <div className="flex flex-col divide-y divide-[#f1f5f9]">
                 {rows.map((row, ri) => (
-                  <div key={ri} className={`grid divide-x divide-[#f1f5f9] ${viewMode === 'day' ? 'grid-cols-1' : 'grid-cols-7'}`} style={{ minHeight: viewMode === 'day' ? '500px' : '120px' }}>
+                  <div key={ri} className={`grid divide-x divide-[#f1f5f9] ${viewMode === 'day' ? 'grid-cols-1' : 'grid-cols-7'}`} style={{ minHeight: viewMode === 'day' ? '500px' : viewMode === 'week' ? '300px' : '120px' }}>
                     {row.map((cell, ci) => {
                       const dayJobs = scheduledOnDay(cell.year, cell.month, cell.day)
                       const isOver  = dragOverDay?.year === cell.year && dragOverDay?.month === cell.month && dragOverDay?.day === cell.day
