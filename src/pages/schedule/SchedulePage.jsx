@@ -177,7 +177,7 @@ function JobChip({ job, onDragStart, onClick }) {
       className={`flex flex-col gap-2 p-2 rounded-[14px] border cursor-grab active:cursor-grabbing hover:brightness-95 transition-all select-none ${employeeColor}`}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-white/90 ${statusConfig.border} ${statusConfig.text}`}>
+        <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border text-[#0f172b] ${employeeColor}`}>
           {job.job_id}
         </span>
         <span className="text-[10px] font-semibold text-[#334155] truncate">
