@@ -49,6 +49,7 @@ function mapJob(j) {
     rawStatus:      j.status,           // keep raw status for color mapping
     employeeName:   j.assigned_to?.full_name ?? 'Unassigned',
     employeeId:     j.assigned_to?.id ?? null,
+    insuredAddress: j.insured_address ?? '—',
     scheduledDate:  parsed ? { year: parsed.year, month: parsed.month, day: parsed.day } : null,
     scheduledTime:  parsed?.time ?? '09:00',
     _isScheduled:   !!parsed,
@@ -183,32 +184,127 @@ function TimePickerModal({ job, date, saving, onConfirm, onCancel }) {
   )
 }
 
+// ── Hover job detail popup ────────────────────────────────────────────────────
+function JobDetailPopup({ job, position }) {
+  if (!position) return null
+  const { top, left } = position
+  return (
+    <div
+      className="fixed z-50 bg-white rounded-[12px] shadow-[0_10px_40px_rgba(15,23,43,0.3)] border border-[#e2e8f0] p-4 w-[280px]"
+      style={{
+        top: `${top}px`,
+        left: `${left}px`,
+        transform: 'translate(-50%, calc(-100% - 8px))',
+        pointerEvents: 'none',
+      }}
+    >
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div>
+          <span className="inline-block text-[11px] font-bold px-2 py-1 rounded-full bg-[#f8fafc] border border-[#e2e8f0] text-[#314158]">
+            {job.job_id}
+          </span>
+          <p className="text-[13px] font-bold text-[#0f172b] mt-1.5">{job.client}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2 text-[12px]">
+        <div className="flex items-center justify-between">
+          <span className="text-[#62748e]">Status:</span>
+          <span className="font-semibold text-[#0f172b]">{job.status}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[#62748e]">Priority:</span>
+          <span className="font-semibold text-[#0f172b]">{job.priority}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[#62748e]">Employee:</span>
+          <span className="font-semibold text-[#0f172b]">{job.employeeName}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[#62748e]">Time:</span>
+          <span className="font-semibold text-[#0f172b]">{job.scheduledTime}</span>
+        </div>
+        <div className="border-t border-[#f1f5f9] pt-2">
+          <span className="text-[#62748e] text-[11px]">Address:</span>
+          <p className="text-[#0f172b] font-semibold mt-0.5 leading-[16px]">
+            {job.insuredAddress}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Job chip (on calendar) ────────────────────────────────────────────────────
 function JobChip({ job, onDragStart, onClick }) {
   const statusConfig = STATUS_CHIP[job.status] ?? DEFAULT_CHIP
   const employeeColor = getEmployeeColor(job.employeeId)
+  const [hovering, setHovering] = useState(false)
+  const [popupPosition, setPopupPosition] = useState(null)
+  const chipRef = useRef(null)
+  const hoverTimeoutRef = useRef(null)
+
+  const handleMouseEnter = () => {
+    setHovering(true)
+    hoverTimeoutRef.current = setTimeout(() => {
+      if (chipRef.current) {
+        const rect = chipRef.current.getBoundingClientRect()
+        setPopupPosition({
+          top: rect.top + window.scrollY,
+          left: rect.left + rect.width / 2 + window.scrollX,
+        })
+      }
+    }, 2000)
+  }
+
+  const handleMouseLeave = () => {
+    setHovering(false)
+    setPopupPosition(null)
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
+  }
+
   return (
-    <div
-      draggable
-      onDragStart={e => { e.stopPropagation(); onDragStart(e, job) }}
-      onClick={e => { e.stopPropagation(); onClick(job) }}
-      className={`flex flex-col gap-2 p-2 rounded-[14px] border cursor-grab active:cursor-grabbing hover:brightness-95 transition-all select-none ${employeeColor.bg} ${employeeColor.border}`}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border ${statusConfig.border} ${statusConfig.bg} ${statusConfig.text}`}>
-          {job.job_id}
-        </span>
-        <span className="text-[10px] font-semibold text-[#334155] truncate">
-          {job.employeeName}
-        </span>
+    <>
+      <div
+        ref={chipRef}
+        draggable
+        onDragStart={e => { e.stopPropagation(); onDragStart(e, job) }}
+        onClick={e => { e.stopPropagation(); onClick(job) }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={`flex flex-col gap-1.5 p-2 rounded-[12px] border cursor-grab active:cursor-grabbing hover:brightness-95 transition-all select-none min-h-fit ${employeeColor.bg} ${employeeColor.border}`}
+      >
+        <div className="flex items-center gap-1 flex-wrap">
+          <span className={`inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${statusConfig.border} ${statusConfig.bg} ${statusConfig.text}`}>
+            {job.job_id}
+          </span>
+          <span className="text-[9px] font-semibold text-[#334155] line-clamp-1">
+            {job.employeeName}
+          </span>
+        </div>
+
+        <p className="text-[11px] font-semibold text-[#0f172b] leading-[14px] break-words">
+          {job.client}
+        </p>
+
+        {job.insuredAddress && job.insuredAddress !== '—' && (
+          <p className="text-[9px] text-[#62748e] leading-[12px] break-words line-clamp-2">
+            {job.insuredAddress}
+          </p>
+        )}
+
+        <div className="flex items-center justify-between gap-1">
+          <span className="flex items-center gap-0.5 text-[9px] text-[#475569]">
+            <IconClock /> {job.scheduledTime}
+          </span>
+          <span className="text-[8px] font-semibold px-1 py-0.5 rounded-full bg-white/50 text-[#314158]">
+            {job.priority}
+          </span>
+        </div>
       </div>
-      <p className="text-[12px] font-semibold text-[#0f172b] leading-[15px] truncate">
-        {job.client}
-      </p>
-      <span className="flex items-center gap-1 text-[10px] text-[#475569]">
-        <IconClock /> {job.scheduledTime}
-      </span>
-    </div>
+
+      {popupPosition && <JobDetailPopup job={job} position={popupPosition} />}
+    </>
   )
 }
 
@@ -301,6 +397,39 @@ export default function SchedulePage() {
     else setViewMonth(m => m + 1)
   }
 
+  // For week/day views, we navigate by date instead
+  const prevWeekOrDay = () => {
+    const d = new Date(viewYear, viewMonth, 1)
+    d.setDate(d.getDate() - (viewMode === 'week' ? 7 : 1))
+    setViewYear(d.getFullYear())
+    setViewMonth(d.getMonth())
+  }
+
+  const nextWeekOrDay = () => {
+    const d = new Date(viewYear, viewMonth, 1)
+    d.setDate(d.getDate() + (viewMode === 'week' ? 7 : 1))
+    setViewYear(d.getFullYear())
+    setViewMonth(d.getMonth())
+  }
+
+  // Helper: get week start (Sunday) from a date
+  const getWeekStart = (year, month, day) => {
+    const d = new Date(year, month, day)
+    const dayOfWeek = d.getDay()
+    d.setDate(d.getDate() - dayOfWeek)
+    return d
+  }
+
+  // Helper: get display label based on view mode
+  const getViewLabel = () => {
+    if (viewMode === 'month') return `${MONTHS[viewMonth]} ${viewYear}`
+    if (viewMode === 'week') {
+      const ws = getWeekStart(viewYear, viewMonth, 1)
+      return `Week of ${MONTHS[ws.getMonth()]} ${ws.getDate()}`
+    }
+    return `${MONTHS[viewMonth]} ${viewYear === today.getFullYear() ? '' : viewYear}`
+  }
+
   // ── Derived data ───────────────────────────────────────────────────────────
   const unscheduled = jobs.filter(j => !j._isScheduled)
 
@@ -327,26 +456,47 @@ export default function SchedulePage() {
   }
 
   // ── Calendar grid ──────────────────────────────────────────────────────────
-  const firstDay   = firstDayOfMonth(viewYear, viewMonth)
-  const totalDays  = daysInMonth(viewYear, viewMonth)
-  const prevDays   = daysInMonth(viewYear, viewMonth === 0 ? 11 : viewMonth - 1)
-  const totalCells = Math.ceil((firstDay + totalDays) / 7) * 7
-  const cells = Array.from({ length: totalCells }, (_, i) => {
-    if (i < firstDay) {
-      const pm = viewMonth === 0 ? 11 : viewMonth - 1
-      const py = viewMonth === 0 ? viewYear - 1 : viewYear
-      return { day: prevDays - firstDay + i + 1, month: pm, year: py, current: false }
-    }
-    const d = i - firstDay + 1
-    if (d > totalDays) {
-      const nm = viewMonth === 11 ? 0 : viewMonth + 1
-      const ny = viewMonth === 11 ? viewYear + 1 : viewYear
-      return { day: d - totalDays, month: nm, year: ny, current: false }
-    }
-    return { day: d, month: viewMonth, year: viewYear, current: true }
-  })
-  const rows = []
-  for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7))
+  let rows = []
+
+  if (viewMode === 'month') {
+    // Month view — original logic
+    const firstDay   = firstDayOfMonth(viewYear, viewMonth)
+    const totalDays  = daysInMonth(viewYear, viewMonth)
+    const prevDays   = daysInMonth(viewYear, viewMonth === 0 ? 11 : viewMonth - 1)
+    const totalCells = Math.ceil((firstDay + totalDays) / 7) * 7
+    const cells = Array.from({ length: totalCells }, (_, i) => {
+      if (i < firstDay) {
+        const pm = viewMonth === 0 ? 11 : viewMonth - 1
+        const py = viewMonth === 0 ? viewYear - 1 : viewYear
+        return { day: prevDays - firstDay + i + 1, month: pm, year: py, current: false }
+      }
+      const d = i - firstDay + 1
+      if (d > totalDays) {
+        const nm = viewMonth === 11 ? 0 : viewMonth + 1
+        const ny = viewMonth === 11 ? viewYear + 1 : viewYear
+        return { day: d - totalDays, month: nm, year: ny, current: false }
+      }
+      return { day: d, month: viewMonth, year: viewYear, current: true }
+    })
+    for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7))
+  } else if (viewMode === 'week') {
+    // Week view — show 7 consecutive days from week start
+    const ws = getWeekStart(viewYear, viewMonth, 1)
+    const cells = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(ws)
+      d.setDate(d.getDate() + i)
+      return {
+        day: d.getDate(),
+        month: d.getMonth(),
+        year: d.getFullYear(),
+        current: d.getMonth() === viewMonth && d.getFullYear() === viewYear,
+      }
+    })
+    rows = [cells]
+  } else {
+    // Day view — show single day
+    rows = [[{ day: 1, month: viewMonth, year: viewYear, current: true }]]
+  }
 
   const isToday = (year, month, day) =>
     year === today.getFullYear() && month === today.getMonth() && day === today.getDate()
@@ -502,7 +652,7 @@ export default function SchedulePage() {
             </div>
 
             <div className="flex items-center gap-3 shrink-0">
-              {/* Month/Week/Day toggle 
+              {/* Month/Week/Day toggle */}
               <div className="flex items-center bg-white border border-[#e2e8f0] rounded-[10px] p-[3px]">
                 {['month','week','day'].map(mode => (
                   <button key={mode} onClick={() => setViewMode(mode)}
@@ -515,18 +665,17 @@ export default function SchedulePage() {
                   </button>
                 ))}
               </div>
-              */}
 
               {/* Month navigation */}
               <div className="flex items-center gap-1 bg-white border border-[#e2e8f0] rounded-[10px] px-2 py-[5px]">
-                <button onClick={prevMonth}
+                <button onClick={viewMode === 'month' ? prevMonth : prevWeekOrDay}
                   className="w-7 h-7 flex items-center justify-center rounded-[6px] text-[#314158] hover:bg-[#f8fafc] transition-colors">
                   <IconChevLeft />
                 </button>
                 <span className="text-[#0f172b] font-bold text-[14px] w-[130px] text-center select-none">
-                  {MONTHS[viewMonth]} {viewYear}
+                  {getViewLabel()}
                 </span>
-                <button onClick={nextMonth}
+                <button onClick={viewMode === 'month' ? nextMonth : nextWeekOrDay}
                   className="w-7 h-7 flex items-center justify-center rounded-[6px] text-[#314158] hover:bg-[#f8fafc] transition-colors">
                   <IconChevRight />
                 </button>
@@ -538,10 +687,10 @@ export default function SchedulePage() {
           <div className="flex-1 bg-white border border-[#e2e8f0] rounded-[14px] overflow-hidden shadow-[0px_1px_3px_rgba(0,0,0,0.07)]">
 
             {/* Day headers */}
-            <div className="grid grid-cols-7 border-b border-[#e2e8f0]">
-              {DAYS.map(d => (
-                <div key={d} className="py-[10px] text-center text-[12px] font-bold text-[#62748e] uppercase tracking-[0.5px]">
-                  {d}
+            <div className={`grid border-b border-[#e2e8f0] ${viewMode === 'day' ? 'grid-cols-1' : 'grid-cols-7'}`}>
+              {rows[0]?.map(cell => (
+                <div key={`header-${cell.day}-${cell.month}`} className="py-[10px] text-center text-[12px] font-bold text-[#62748e] uppercase tracking-[0.5px]">
+                  {DAYS[new Date(cell.year, cell.month, cell.day).getDay()]}
                 </div>
               ))}
             </div>
@@ -557,7 +706,7 @@ export default function SchedulePage() {
             ) : (
               <div className="flex flex-col divide-y divide-[#f1f5f9]">
                 {rows.map((row, ri) => (
-                  <div key={ri} className="grid grid-cols-7 divide-x divide-[#f1f5f9]" style={{ minHeight: '120px' }}>
+                  <div key={ri} className={`grid divide-x divide-[#f1f5f9] ${viewMode === 'day' ? 'grid-cols-1' : 'grid-cols-7'}`} style={{ minHeight: viewMode === 'day' ? '500px' : '120px' }}>
                     {row.map((cell, ci) => {
                       const dayJobs = scheduledOnDay(cell.year, cell.month, cell.day)
                       const isOver  = dragOverDay?.year === cell.year && dragOverDay?.month === cell.month && dragOverDay?.day === cell.day
@@ -571,13 +720,14 @@ export default function SchedulePage() {
                           onDrop={e => handleDrop(e, cell)}
                           onDragEnd={handleDragEnd}
                           className={[
-                            'p-2 flex flex-col gap-1.5 transition-colors duration-100 min-h-[120px]',
+                            'p-3 flex flex-col gap-2 transition-colors duration-100',
+                            viewMode === 'day' ? '' : 'min-h-[120px]',
                             !cell.current ? 'bg-[#fafafa]' : '',
                             isOver ? 'bg-[#fff4ee] ring-2 ring-inset ring-[#f54900]/30' : '',
                           ].join(' ')}
                         >
-                          {/* Day number */}
-                          <div className="flex items-center justify-between">
+                          {/* Day number + date info */}
+                          <div className="flex items-center justify-between flex-wrap gap-1">
                             <span className={[
                               'text-[13px] font-bold w-7 h-7 flex items-center justify-center rounded-full leading-none',
                               todayDay
@@ -588,33 +738,60 @@ export default function SchedulePage() {
                             ].join(' ')}>
                               {cell.day}
                             </span>
-                            {dayJobs.length > 0 && (
+                            {viewMode !== 'day' && dayJobs.length > 0 && (
                               <span className="text-[10px] text-[#90a1b9] font-medium">
                                 {dayJobs.length} job{dayJobs.length > 1 ? 's' : ''}
                               </span>
                             )}
+                            {viewMode === 'day' && (
+                              <span className="text-[11px] text-[#62748e] font-semibold">
+                                {MONTHS[cell.month]} {cell.day}, {cell.year}
+                              </span>
+                            )}
                           </div>
 
-                          {/* Job chips — max 3 visible, same-time groups display side-by-side */}
-                          {groupJobsByTime(dayJobs.slice(0, 3)).map(group => {
-                            const cols = group.jobs.length === 2 ? 'grid-cols-2' : group.jobs.length >= 3 ? 'grid-cols-3' : 'grid-cols-1'
-                            return (
-                              <div key={group.time} className={`grid gap-1 ${cols}`}>
-                                {group.jobs.map(job => (
-                                  <JobChip
-                                    key={job.id}
-                                    job={job}
-                                    onDragStart={handleDragStart}
-                                    onClick={handleChipClick}
-                                  />
-                                ))}
-                              </div>
-                            )
-                          })}
-                          {dayJobs.length > 3 && (
-                            <span className="text-[10px] text-[#90a1b9] font-medium px-1">
-                              +{dayJobs.length - 3} more
-                            </span>
+                          {/* Job chips — responsive to view mode */}
+                          {viewMode === 'day' ? (
+                            // Day view: show all jobs in a single column, more spacious
+                            <div className="flex flex-col gap-2">
+                              {dayJobs.map(job => (
+                                <JobChip
+                                  key={job.id}
+                                  job={job}
+                                  onDragStart={handleDragStart}
+                                  onClick={handleChipClick}
+                                />
+                              ))}
+                              {dayJobs.length === 0 && (
+                                <div className="flex items-center justify-center h-32 text-[#cad5e2] text-[13px]">
+                                  No jobs scheduled
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            // Month/Week view: show max 3, group by time
+                            <>
+                              {groupJobsByTime(dayJobs.slice(0, 3)).map(group => {
+                                const cols = group.jobs.length === 2 ? 'grid-cols-2' : group.jobs.length >= 3 ? 'grid-cols-3' : 'grid-cols-1'
+                                return (
+                                  <div key={group.time} className={`grid gap-1 ${cols}`}>
+                                    {group.jobs.map(job => (
+                                      <JobChip
+                                        key={job.id}
+                                        job={job}
+                                        onDragStart={handleDragStart}
+                                        onClick={handleChipClick}
+                                      />
+                                    ))}
+                                  </div>
+                                )
+                              })}
+                              {dayJobs.length > 3 && (
+                                <span className="text-[10px] text-[#90a1b9] font-medium px-1">
+                                  +{dayJobs.length - 3} more
+                                </span>
+                              )}
+                            </>
                           )}
 
                           {/* Drop hint */}
