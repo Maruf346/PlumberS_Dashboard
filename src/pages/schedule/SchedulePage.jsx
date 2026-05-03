@@ -87,19 +87,24 @@ const DEFAULT_CHIP = { bg: 'bg-[#f8fafc]', border: 'border-[#e2e8f0]', text: 'te
 
 // ── Employee color palette ─────────────────────────────────────────────────────
 const EMPLOYEE_COLORS = [
-  'bg-[#dbeafe] border-[#3b82f6]',  // blue
-  'bg-[#fee2e2] border-[#f54900]',  // orange
-  'bg-[#ede9fe] border-[#8b5cf6]',  // purple
-  'bg-[#cffafe] border-[#06b6d4]',  // cyan
-  'bg-[#d1fae5] border-[#10b981]',  // emerald
-  'bg-[#fef3c7] border-[#f59e0b]',  // amber
-  'bg-[#fce7f3] border-[#ec4899]',  // pink
-  'bg-[#e0e7ff] border-[#6366f1]',  // indigo
+  { bg: 'bg-[#dbeafe]', border: 'border-[#3b82f6]' },  // blue
+  { bg: 'bg-[#fee2e2]', border: 'border-[#f54900]' },  // orange
+  { bg: 'bg-[#ede9fe]', border: 'border-[#8b5cf6]' },  // purple
+  { bg: 'bg-[#cffafe]', border: 'border-[#06b6d4]' },  // cyan
+  { bg: 'bg-[#d1fae5]', border: 'border-[#10b981]' },  // emerald
+  { bg: 'bg-[#fef3c7]', border: 'border-[#f59e0b]' },  // amber
+  { bg: 'bg-[#fce7f3]', border: 'border-[#ec4899]' },  // pink
+  { bg: 'bg-[#e0e7ff]', border: 'border-[#6366f1]' },  // indigo
+  { bg: 'bg-[#fee2ff]', border: 'border-[#d946ef]' },  // fuchsia
+  { bg: 'bg-[#fde68a]', border: 'border-[#d97706]' },  // yellow
+  { bg: 'bg-[#d9f99d]', border: 'border-[#4d7c0f]' },  // lime
+  { bg: 'bg-[#f8fafc]', border: 'border-[#94a3b8]' },  // slate
 ]
 
 function getEmployeeColor(employeeId) {
-  if (!employeeId) return 'bg-[#f3f4f6] border-[#d1d5db]' // gray for unassigned
-  const hash = employeeId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  if (!employeeId) return { bg: 'bg-[#f3f4f6]', border: 'border-[#d1d5db]' } // gray for unassigned
+  const idString = String(employeeId)
+  const hash = idString.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
   const idx = hash % EMPLOYEE_COLORS.length
   return EMPLOYEE_COLORS[idx]
 }
@@ -174,10 +179,10 @@ function JobChip({ job, onDragStart, onClick }) {
       draggable
       onDragStart={e => { e.stopPropagation(); onDragStart(e, job) }}
       onClick={e => { e.stopPropagation(); onClick(job) }}
-      className={`flex flex-col gap-2 p-2 rounded-[14px] border cursor-grab active:cursor-grabbing hover:brightness-95 transition-all select-none ${employeeColor}`}
+      className={`flex flex-col gap-2 p-2 rounded-[14px] border cursor-grab active:cursor-grabbing hover:brightness-95 transition-all select-none ${employeeColor.bg} ${employeeColor.border}`}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border text-[#0f172b] ${employeeColor}`}>
+        <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border ${statusConfig.border} ${statusConfig.bg} ${statusConfig.text}`}>
           {job.job_id}
         </span>
         <span className="text-[10px] font-semibold text-[#334155] truncate">
