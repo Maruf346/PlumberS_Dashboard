@@ -246,15 +246,13 @@ function JobChip({ job, onDragStart, onClick }) {
 
   const handleMouseEnter = () => {
     setHovering(true)
-    hoverTimeoutRef.current = setTimeout(() => {
-      if (chipRef.current) {
-        const rect = chipRef.current.getBoundingClientRect()
-        setPopupPosition({
-          top: rect.top + window.scrollY,
-          left: rect.left + rect.width / 2 + window.scrollX,
-        })
-      }
-    }, 2000)
+    if (chipRef.current) {
+      const rect = chipRef.current.getBoundingClientRect()
+      setPopupPosition({
+        top: rect.top + window.scrollY,
+        left: rect.left + rect.width / 2 + window.scrollX,
+      })
+    }
   }
 
   const handleMouseLeave = () => {
