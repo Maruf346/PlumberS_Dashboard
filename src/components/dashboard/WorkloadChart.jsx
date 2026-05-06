@@ -53,7 +53,7 @@ export default function WorkloadChart({ stats, loading }) {
 
   return (
     <div className="w-full">
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-2">
         {bars.map(({ label, value, color }) => (
           <div key={label} className="flex items-center gap-3">
             <span className="text-[12px] leading-[16px] text-[#64748b] font-['Inter',sans-serif] w-[80px] text-right shrink-0">
