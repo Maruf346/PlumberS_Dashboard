@@ -3,6 +3,9 @@ version: 0.2
 env:
   parameter-store:
     VITE_API_BASE_URL: "/plumbers/prod/api-url"
+    VITE_AWS_LOCATION_API_KEY:    "/plumbers/prod/aws-location-key"
+    VITE_AWS_LOCATION_REGION:     "/plumbers/prod/aws-location-region"
+    VITE_AWS_LOCATION_INDEX:      "/plumbers/prod/aws-location-index"
 
 phases:
   install:
