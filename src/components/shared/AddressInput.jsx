@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import debounce from 'lodash.debounce'
-import FormInput from './FormInput'
 
 export default function AddressInput({ label, id, value, onChange, placeholder = '', icon }) {
   const [query, setQuery] = useState(value || '')
@@ -9,19 +8,35 @@ export default function AddressInput({ label, id, value, onChange, placeholder =
   const ref = useRef(null)
 
   const apiKey = import.meta.env.VITE_AWS_LOCATION_API_KEY
-  const region = import.meta.env.VITE_AWS_LOCATION_REGION || 'ap-southeast-2'
-  const index = import.meta.env.VITE_AWS_LOCATION_INDEX
+  const region = import.meta.env.VITE_AWS_LOCATION_REGION || 'eu-north-1'
 
   const fetchSuggestions = async (q) => {
-    if (!apiKey || !index) return setResults([])
+    if (!apiKey) {
+      setResults([])
+      return
+    }
+
     try {
-      const base = `https://places.geo.${region}.amazonaws.com/places/v0/indexes/${index}/search/suggestions`
-      const url = `${base}?text=${encodeURIComponent(q)}&key=${apiKey}`
-      const res = await fetch(url)
-      if (!res.ok) return setResults([])
+      const url = `https://places.geo.${region}.amazonaws.com/v2/autocomplete?query=${encodeURIComponent(q)}`
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'x-api-key': apiKey,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!res.ok) {
+        console.error('AWS Places autocomplete error:', res.status, res.statusText)
+        setResults([])
+        return
+      }
+
       const json = await res.json()
-      setResults(Array.isArray(json.Results) ? json.Results : [])
-    } catch (e) {
+      const items = Array.isArray(json.ResultItems) ? json.ResultItems : []
+      setResults(items)
+    } catch (error) {
+      console.error('AWS Places autocomplete fetch failed:', error)
       setResults([])
     }
   }
@@ -29,7 +44,7 @@ export default function AddressInput({ label, id, value, onChange, placeholder =
   const debounced = useCallback(debounce((q) => {
     if (q.length < 3) return setResults([])
     fetchSuggestions(q)
-  }, 300), [apiKey, region, index])
+  }, 300), [apiKey, region])
 
   useEffect(() => {
     return () => debounced.cancel && debounced.cancel()
@@ -48,9 +63,11 @@ export default function AddressInput({ label, id, value, onChange, placeholder =
   }, [query, debounced])
 
   useEffect(() => {
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
+    const handleOutsideClick = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
   }, [])
 
   const handleSelect = (text) => {
@@ -74,10 +91,10 @@ export default function AddressInput({ label, id, value, onChange, placeholder =
         {open && results && results.length > 0 && (
           <div className="absolute left-0 top-[42px] z-50 w-full bg-white border border-[#e2e8f0] rounded-[10px] shadow-[0px_8px_24px_rgba(15,23,43,0.12)] max-h-[220px] overflow-y-auto py-1">
             {results.map((r, i) => (
-              <button key={r.PlaceId ?? i} type="button" onMouseDown={() => handleSelect(r.Text)}
+              <button key={r.PlaceId ?? i} type="button" onMouseDown={() => handleSelect(r.Title)}
                 className="flex items-center gap-3 w-full px-4 py-[10px] hover:bg-[#f8fafc] text-left">
                 <div className="min-w-0">
-                  <p className="text-[13px] text-[#0f172b] font-semibold truncate">{r.Text}</p>
+                  <p className="text-[13px] text-[#0f172b] font-semibold truncate">{r.Title}</p>
                 </div>
               </button>
             ))}
