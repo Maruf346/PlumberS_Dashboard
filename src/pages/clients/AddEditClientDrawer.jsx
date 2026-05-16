@@ -6,6 +6,7 @@
 
 import { useState, useRef } from 'react'
 import FormInput             from '@/components/shared/FormInput'
+import AddressInput          from '@/components/shared/AddressInput'
 import FormTextarea          from '@/components/shared/FormTextarea'
 import FormSelect            from '@/components/shared/FormSelect'
 import FormSectionHeader     from '@/components/shared/FormSectionHeader'
@@ -226,18 +227,9 @@ export default function AddEditClientDrawer({ mode = 'add', initialData = null, 
           <section className="flex flex-col gap-4">
             <FormSectionHeader icon={IconMapPin} title="Site Info" />
             <div className="flex flex-col gap-[6px]">
-              <label htmlFor="address" className="text-[#0f172b] text-[14px] font-semibold leading-[20px]">
-                Address <span className="text-[#f54900]">*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#90a1b9]"><IconMapPin /></span>
-                <input id="address" type="text" value={form.address}
-                  onChange={e => setForm(prev => ({ ...prev, address: e.target.value }))}
-                  placeholder="e.g. 458 Industrial Ave, Adelaide SA"
-                  className={['w-full h-[38px] rounded-[8px] border text-[14px] text-[#0f172b] pl-9 pr-3 placeholder:text-[#90a1b9] transition-colors',
-                    errors.address ? 'border-[#c10007] bg-[#fef2f2] focus:outline-none focus:ring-2 focus:ring-[#c10007]/20'
-                    : 'border-[#e2e8f0] bg-white focus:outline-none focus:ring-2 focus:ring-[#f54900]/25 focus:border-[#f54900]/60'].join(' ')} />
-              </div>
+              <AddressInput label="Address" id="address" value={form.address}
+                onChange={(v) => setForm(prev => ({ ...prev, address: v }))}
+                placeholder="e.g. 458 Industrial Ave, Adelaide SA" icon={IconMapPin} />
               {errors.address && <p className="text-[#c10007] text-[12px]">{errors.address}</p>}
               {mapsUrl && (
                 <a href={mapsUrl} target="_blank" rel="noopener noreferrer"

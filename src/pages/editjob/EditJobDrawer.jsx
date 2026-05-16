@@ -8,6 +8,7 @@ import { useState, useEffect, useRef } from 'react'
 import { apiFetch }                    from '@/utils/apiFetch'
 
 import FormInput         from '@/components/shared/FormInput'
+import AddressInput      from '@/components/shared/AddressInput'
 import FormTextarea      from '@/components/shared/FormTextarea'
 import FormSelect        from '@/components/shared/FormSelect'
 import MultiSelect       from '@/components/shared/MultiSelect'
@@ -417,7 +418,7 @@ export default function EditJobDrawer({ jobId, job, onClose, onSaved, onDeleted 
                   <FormInput label="Insured Email" id="insured_email" value={form.insured_email} onChange={set('insured_email')}
                     placeholder="email@example.com" icon={IconMail} />
                 </div>
-                <FormInput label="Insured Address" id="insured_address" value={form.insured_address} onChange={set('insured_address')}
+                <AddressInput label="Insured Address" id="insured_address" value={form.insured_address} onChange={set('insured_address')}
                   placeholder="Street address of the insured property" icon={IconMapPin} />
                 <FormTextarea label="Site Access Info" id="site_access_info" value={form.site_access_info} onChange={set('site_access_info')}
                   placeholder="Gate codes, access instructions, entry notes… (optional)" rows={3} />
