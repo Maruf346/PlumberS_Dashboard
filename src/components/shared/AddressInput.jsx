@@ -90,9 +90,11 @@ export default function AddressInput({ label, id, value, onChange, placeholder =
           <div className="absolute left-0 top-[42px] z-50 w-full bg-white border border-[#e2e8f0] rounded-[10px] shadow-[0px_8px_24px_rgba(15,23,43,0.12)] max-h-[220px] overflow-y-auto py-1">
             {results.map((r, i) => (
               <button key={r.PlaceId ?? i} type="button"
-                onMouseDown={() => handleSelect(r.Title)}
+                onMouseDown={() => handleSelect(r.Address?.Label?.replace(/, Australia$/, '') ?? r.Title)}
                 className="flex items-center gap-3 w-full px-4 py-[10px] hover:bg-[#f8fafc] text-left">
-                <p className="text-[13px] text-[#0f172b] font-semibold truncate">{r.Title}</p>
+                <p className="text-[13px] text-[#0f172b] font-semibold truncate">
+                  {r.Address?.Label?.replace(/, Australia$/, '') ?? r.Title}
+                </p>
               </button>
             ))}
           </div>
