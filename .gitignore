@@ -25,7 +25,7 @@ dist-ssr
 .env
 
 /.refact
-
+/.claude
 
 .env.local
 *.local
