@@ -77,7 +77,7 @@ export default function AddressInput({ label, id, value, onChange, placeholder =
         </div>
         <input
           id={id} type="text" value={query}
-          onChange={e => { setQuery(e.target.value); setOpen(true) }}
+          onChange={e => { setQuery(e.target.value); setOpen(true); onChange?.(e.target.value) }}
           onFocus={() => results.length > 0 && setOpen(true)}
           placeholder={placeholder}
           className={[
