@@ -339,8 +339,43 @@ function UnscheduledRow({ job, onDragStart }) {
   )
 }
 
+// ── Week view: overlap layout algorithm ──────────────────────────────────────
+// Returns [{ job, lane, totalCols }] where lane = column index, totalCols = total
+// columns needed in this job's overlap group. Uses greedy interval-graph colouring.
+function computeLayout(dayJobs) {
+  if (!dayJobs.length) return []
+
+  const enriched = dayJobs
+    .map(j => ({
+      job:      j,
+      startMin: minutesFromTime(j.scheduledTime),
+      endMin:   j.endTime
+        ? minutesFromTime(j.endTime)
+        : minutesFromTime(j.scheduledTime) + 60,
+    }))
+    .sort((a, b) => a.startMin - b.startMin || b.endMin - a.endMin)
+
+  // Assign each job to the first free lane
+  const laneEnds = [] // laneEnds[i] = endMin of last job placed in lane i
+  const placed = enriched.map(item => {
+    let lane = laneEnds.findIndex(end => end <= item.startMin)
+    if (lane === -1) lane = laneEnds.length
+    laneEnds[lane] = item.endMin
+    return { ...item, lane }
+  })
+
+  // totalCols for each job = max lane among all jobs it overlaps + 1
+  return placed.map(p => {
+    const overlapping = placed.filter(
+      q => q.startMin < p.endMin && q.endMin > p.startMin
+    )
+    const totalCols = Math.max(...overlapping.map(q => q.lane)) + 1
+    return { job: p.job, lane: p.lane, totalCols }
+  })
+}
+
 // ── Week view: individual job card ────────────────────────────────────────────
-function WeekJobCard({ job, top, height, onDragStart, onClick, onResizeEnd }) {
+function WeekJobCard({ job, top, height, lane, totalCols, scrollRef, onDragStart, onClick, onResizeEnd }) {
   const employeeColor  = getEmployeeColor(job.employeeId)
   const statusConfig   = STATUS_CHIP[job.status] ?? DEFAULT_CHIP
   const [liveHeight, setLiveHeight]   = useState(height)
@@ -356,14 +391,17 @@ function WeekJobCard({ job, top, height, onDragStart, onClick, onResizeEnd }) {
   const handleResizeMouseDown = useCallback((e) => {
     e.preventDefault()
     e.stopPropagation()
-    const startY  = e.clientY
-    const startH  = currentHeightRef.current
-    const startMin = minutesFromTime(job.scheduledTime)
+    const startY           = e.clientY
+    const startH           = currentHeightRef.current
+    const startMin         = minutesFromTime(job.scheduledTime)
+    const initialScrollTop = scrollRef?.current?.scrollTop ?? 0
 
     setIsResizing(true)
 
     const onMove = (ev) => {
-      const newH = Math.max(30, startH + (ev.clientY - startY))
+      // Account for any scrolling that happened since drag started
+      const scrollDelta = (scrollRef?.current?.scrollTop ?? 0) - initialScrollTop
+      const newH = Math.max(30, startH + (ev.clientY - startY) + scrollDelta)
       currentHeightRef.current = newH
       setLiveHeight(newH)
     }
@@ -379,19 +417,32 @@ function WeekJobCard({ job, top, height, onDragStart, onClick, onResizeEnd }) {
 
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup',   onUp)
-  }, [job.scheduledTime, onResizeEnd])
+  }, [job.scheduledTime, onResizeEnd, scrollRef])
 
   const showClient   = liveHeight > 42
   const showTime     = liveHeight > 58
   const showEmployee = liveHeight > 76
   const showAddress  = liveHeight > 100
 
+  // Side-by-side positioning when overlapping
+  const GAP    = 2 // px gap between adjacent cards
+  const colPct = 100 / totalCols
+  const leftPct  = lane * colPct
+  const widthPct = colPct
+
   return (
     <div
       draggable={!isResizing}
       onDragStart={e => { if (isResizing) return; e.stopPropagation(); onDragStart(e, job) }}
       onClick={e => { e.stopPropagation(); onClick(job) }}
-      style={{ position: 'absolute', top, left: 3, right: 3, height: liveHeight, zIndex: isResizing ? 20 : 2 }}
+      style={{
+        position: 'absolute',
+        top,
+        left:   `calc(${leftPct}% + ${lane === 0 ? GAP : GAP / 2}px)`,
+        width:  `calc(${widthPct}% - ${lane === 0 || lane === totalCols - 1 ? GAP * 1.5 : GAP}px)`,
+        height: liveHeight,
+        zIndex: isResizing ? 30 : lane + 2,
+      }}
       className={[
         'rounded-[8px] border flex flex-col overflow-hidden select-none transition-shadow',
         employeeColor.bg, employeeColor.border,
@@ -487,12 +538,12 @@ function WeekView({ days, jobs, today, draggingJobRef, onDragStart, onJobClick, 
         ))}
       </div>
 
-      {/* Scrollable time body */}
+      {/* Scrollable time body — paddingTop gives 12 AM label breathing room */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        <div className="flex" style={{ height: HOUR_HEIGHT * 24 }}>
+        <div className="flex" style={{ height: HOUR_HEIGHT * 24 + 12, paddingTop: 12 }}>
 
           {/* Time gutter */}
-          <div className="w-[52px] shrink-0 relative border-r border-[#f1f5f9]" style={{ height: HOUR_HEIGHT * 24 }}>
+          <div className="w-[52px] shrink-0 relative border-r border-[#f1f5f9]" style={{ height: '100%' }}>
             {Array.from({ length: 24 }, (_, h) => (
               <div key={h} style={{ position: 'absolute', top: h * HOUR_HEIGHT - 8, right: 0, left: 0, paddingRight: 8 }}
                 className="flex items-start justify-end">
@@ -504,7 +555,7 @@ function WeekView({ days, jobs, today, draggingJobRef, onDragStart, onJobClick, 
           </div>
 
           {/* Day columns */}
-          <div ref={gridRef} className="flex-1 grid grid-cols-7" style={{ height: HOUR_HEIGHT * 24 }}>
+          <div ref={gridRef} className="flex-1 grid grid-cols-7" style={{ height: '100%' }}>
             {days.map((day, colIdx) => {
               const dayJobs = jobs.filter(j =>
                 j._isScheduled &&
@@ -512,6 +563,7 @@ function WeekView({ days, jobs, today, draggingJobRef, onDragStart, onJobClick, 
                 j.scheduledDate?.month === day.month &&
                 j.scheduledDate?.day   === day.day
               )
+              const layout = computeLayout(dayJobs)
               const isOver = dragOverCol === colIdx
 
               return (
@@ -545,8 +597,8 @@ function WeekView({ days, jobs, today, draggingJobRef, onDragStart, onJobClick, 
                       className="absolute left-0 right-0 border-t border-[#f8fafc] pointer-events-none" />
                   ))}
 
-                  {/* Job cards */}
-                  {dayJobs.map(job => {
+                  {/* Job cards — laid out with overlap algorithm */}
+                  {layout.map(({ job, lane, totalCols }) => {
                     const startMin = minutesFromTime(job.scheduledTime)
                     const endMin   = job.endTime ? minutesFromTime(job.endTime) : startMin + 60
                     const cardTop  = startMin / 60 * HOUR_HEIGHT
@@ -557,6 +609,9 @@ function WeekView({ days, jobs, today, draggingJobRef, onDragStart, onJobClick, 
                         job={job}
                         top={cardTop}
                         height={cardH}
+                        lane={lane}
+                        totalCols={totalCols}
+                        scrollRef={scrollRef}
                         onDragStart={onDragStart}
                         onClick={onJobClick}
                         onResizeEnd={(prefillTime) => onResizeEnd(job, prefillTime)}
