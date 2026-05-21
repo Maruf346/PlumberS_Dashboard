@@ -72,6 +72,27 @@ function formatHourLabel(h) {
   return `${h - 12} PM`
 }
 
+// ── 15-min time options (used in New Schedule modal) ──────────────────────────
+const TIME_OPTIONS = Array.from({ length: 96 }, (_, i) => {
+  const h      = Math.floor(i * 15 / 60)
+  const m      = (i * 15) % 60
+  const period = h < 12 ? 'AM' : 'PM'
+  const h12    = h === 0 ? 12 : h > 12 ? h - 12 : h
+  return {
+    value: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`,
+    label: `${h12}:${String(m).padStart(2,'0')} ${period}`,
+  }
+})
+
+function dateToInputStr(year, month, day) {
+  return `${year}-${String(month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+}
+function inputStrToDate(str) {
+  if (!str) { const n = new Date(); return { year: n.getFullYear(), month: n.getMonth(), day: n.getDate() } }
+  const [y, m, d] = str.split('-').map(Number)
+  return { year: y, month: m - 1, day: d }
+}
+
 // ── Data mapping ──────────────────────────────────────────────────────────────
 function apiStatusToDisplay(s) {
   const map = {
@@ -455,6 +476,7 @@ function WeekJobCard({
         draggable={!isResizing}
         onDragStart={e => { if (isResizing) return; e.stopPropagation(); onDragStart(e, job) }}
         onClick={e => { e.stopPropagation(); onClick(job) }}
+        onDoubleClick={e => e.stopPropagation()}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={() => setPopupPos(null)}
         style={{
@@ -556,7 +578,7 @@ function CurrentTimeLine() {
 }
 
 // ── Week view: time grid ───────────────────────────────────────────────────────
-function WeekView({ days, jobs, today, draggingJobRef, onDragStart, onJobClick, onWeekDrop, onWeekResizeSave }) {
+function WeekView({ days, jobs, today, draggingJobRef, onDragStart, onJobClick, onWeekDrop, onWeekResizeSave, onDoubleClickSlot }) {
   const scrollRef = useRef(null)
   const gridRef   = useRef(null)
   const [dragOverCol,  setDragOverCol]  = useState(null)
@@ -665,6 +687,10 @@ function WeekView({ days, jobs, today, draggingJobRef, onDragStart, onJobClick, 
                     onWeekDrop(day, timeFromMinutes(snappedMins))
                   }}
                   onDragEnd={() => setDragOverCol(null)}
+                  onDoubleClick={e => {
+                    const snappedMins = getMinsFromEvent(e)
+                    onDoubleClickSlot?.(day, timeFromMinutes(snappedMins))
+                  }}
                 >
                   {/* Hour lines */}
                   {Array.from({ length: WEEK_HOURS }, (_, i) => (
@@ -734,6 +760,392 @@ function WeekView({ days, jobs, today, draggingJobRef, onDragStart, onJobClick, 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ── New Schedule Modal ────────────────────────────────────────────────────────
+// Double-click an empty time slot → opens this modal.
+// Handles job search, paginated staff list, start/end time, two PATCH calls.
+// ─────────────────────────────────────────────────────────────────────────────
+function NewScheduleModal({ date, startTime, onClose, onSaved }) {
+  // Snap the clicked time to the nearest 15-min slot
+  const initStart = TIME_OPTIONS.find(o => o.value >= startTime)?.value ?? '09:00'
+  const [sh, sm]  = initStart.split(':').map(Number)
+  const endTotal  = Math.min(1439, sh * 60 + sm + 60)
+  const initEnd   = TIME_OPTIONS.find(o => {
+    const [eh, em] = o.value.split(':').map(Number)
+    return eh * 60 + em >= endTotal
+  })?.value ?? '10:00'
+  const initDateStr = dateToInputStr(date.year, date.month, date.day)
+
+  const [startDate, setStartDate] = useState(initDateStr)
+  const [startT,    setStartT]    = useState(initStart)
+  const [endDate,   setEndDate]   = useState(initDateStr)
+  const [endT,      setEndT]      = useState(initEnd)
+
+  // Job search
+  const [selectedJob,  setSelectedJob]  = useState(null)
+  const [jobQuery,     setJobQuery]     = useState('')
+  const [jobResults,   setJobResults]   = useState([])
+  const [jobSearching, setJobSearching] = useState(false)
+
+  // Staff list
+  const [selectedStaff,    setSelectedStaff]    = useState(null)
+  const [staffQuery,       setStaffQuery]       = useState('')
+  const [staffList,        setStaffList]        = useState([])
+  const [staffNextUrl,     setStaffNextUrl]     = useState(null)
+  const [staffLoading,     setStaffLoading]     = useState(true)
+  const [staffLoadingMore, setStaffLoadingMore] = useState(false)
+
+  const [saving, setSaving] = useState(false)
+  const [error,  setError]  = useState('')
+
+  // ── Staff helpers ────────────────────────────────────────────────────────
+  const STAFF_COLORS = ['#3b82f6','#8b5cf6','#f59e0b','#10b981','#ef4444','#06b6d4','#f54900','#ec4899']
+  const staffAvatarColor = (id) => {
+    if (!id) return '#90a1b9'
+    const h = String(id).split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+    return STAFF_COLORS[h % STAFF_COLORS.length]
+  }
+  const staffInitials = (name) => {
+    if (!name?.trim()) return '?'
+    const p = name.trim().split(/\s+/)
+    return p.length >= 2 ? (p[0][0] + p[p.length - 1][0]).toUpperCase() : name.slice(0, 2).toUpperCase()
+  }
+
+  // ── Load staff (reset=true resets the list, false appends for load-more) ─
+  const loadStaff = async (search, reset = true) => {
+    if (reset) setStaffLoading(true)
+    else setStaffLoadingMore(true)
+    const params = new URLSearchParams({ page_size: '15', is_active: 'true' })
+    if (search) params.set('search', search)
+    const { data, ok } = await apiFetch(`user/admin/employeelist/?${params}`)
+    if (ok && data) {
+      setStaffList(reset ? (data.results ?? []) : prev => [...prev, ...(data.results ?? [])])
+      setStaffNextUrl(data.next ?? null)
+    }
+    if (reset) setStaffLoading(false)
+    else setStaffLoadingMore(false)
+  }
+
+  const loadMoreStaff = async () => {
+    if (!staffNextUrl || staffLoadingMore) return
+    setStaffLoadingMore(true)
+    const token = sessionStorage.getItem('access')
+    try {
+      const res  = await fetch(staffNextUrl, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      const data = res.ok ? await res.json() : null
+      if (data) {
+        setStaffList(prev => [...prev, ...(data.results ?? [])])
+        setStaffNextUrl(data.next ?? null)
+      }
+    } catch { /* ignore */ }
+    setStaffLoadingMore(false)
+  }
+
+  // Initial load
+  useEffect(() => { loadStaff('') }, []) // eslint-disable-line
+
+  // Debounced staff search
+  useEffect(() => {
+    const t = setTimeout(() => loadStaff(staffQuery), 300)
+    return () => clearTimeout(t)
+  }, [staffQuery]) // eslint-disable-line
+
+  // Debounced job search
+  useEffect(() => {
+    if (!jobQuery.trim()) { setJobResults([]); setJobSearching(false); return }
+    setJobSearching(true)
+    const t = setTimeout(async () => {
+      const { data, ok } = await apiFetch(
+        `jobs/?page_size=20&search=${encodeURIComponent(jobQuery.trim())}`
+      )
+      if (ok && data) setJobResults((data.results ?? []).map(mapJob))
+      setJobSearching(false)
+    }, 400)
+    return () => { clearTimeout(t); setJobSearching(false) }
+  }, [jobQuery])
+
+  // ── Save ────────────────────────────────────────────────────────────────
+  const handleSave = async () => {
+    if (!selectedJob)   { setError('Please select a job.'); return }
+    if (!selectedStaff) { setError('Please select a staff member.'); return }
+
+    const sDate    = inputStrToDate(startDate)
+    const eDate    = inputStrToDate(endDate)
+    const startISO = toISO(sDate.year, sDate.month, sDate.day, startT)
+    const endISO   = toISO(eDate.year, eDate.month, eDate.day, endT)
+
+    if (new Date(endISO) <= new Date(startISO)) {
+      setError('End must be after start.'); return
+    }
+
+    setSaving(true); setError('')
+
+    const { ok: schedOk } = await apiFetch(`jobs/${selectedJob.id}/schedule/`, {
+      method: 'PATCH',
+      body:   JSON.stringify({ scheduled_datetime: startISO, end_time: endISO }),
+    })
+    if (!schedOk) { setError('Failed to save schedule. Please try again.'); setSaving(false); return }
+
+    const { ok: assignOk } = await apiFetch(`jobs/${selectedJob.id}/update/`, {
+      method: 'PATCH',
+      body:   JSON.stringify({ assigned_to: selectedStaff.id }),
+    })
+    if (!assignOk) { setError('Schedule saved but staff assignment failed.'); setSaving(false); return }
+
+    onSaved({ jobId: selectedJob.id, startDate: sDate, startTime: startT, endTime: endT })
+  }
+
+  // ── Render ───────────────────────────────────────────────────────────────
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172b]/50 backdrop-blur-sm p-4"
+      onClick={e => { if (e.target === e.currentTarget && !saving) onClose() }}
+    >
+      <div
+        className="bg-white rounded-[16px] shadow-[0_24px_80px_rgba(15,23,43,0.28)] w-full max-w-[780px] flex flex-col overflow-hidden"
+        style={{ maxHeight: 'min(92vh, 680px)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#f1f5f9] shrink-0">
+          <div>
+            <h2 className="text-[#0f172b] font-bold text-[18px] leading-[24px]">New Schedule</h2>
+            <p className="text-[#90a1b9] text-[12px] mt-0.5">Select a job, assign staff, and set the time window</p>
+          </div>
+          <button onClick={onClose} disabled={saving}
+            className="w-8 h-8 flex items-center justify-center rounded-[8px] border border-[#e2e8f0] hover:bg-[#f8fafc] text-[#90a1b9] hover:text-[#314158] transition-colors disabled:opacity-40">
+            <IconX />
+          </button>
+        </div>
+
+        {/* Body — two-column */}
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+
+          {/* ── LEFT: date/time + staff ─────────────────────────────────── */}
+          <div className="w-[340px] shrink-0 flex flex-col border-r border-[#f1f5f9] overflow-y-auto">
+            <div className="p-5 flex flex-col gap-4 border-b border-[#f1f5f9]">
+
+              {/* Start */}
+              <div>
+                <p className="text-[11px] font-bold text-[#90a1b9] uppercase tracking-[0.5px] mb-2">
+                  Start <span className="text-[#f54900]">*</span>
+                </p>
+                <div className="flex gap-2">
+                  <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                    className="flex-1 h-[36px] px-3 border border-[#e2e8f0] rounded-[8px] text-[13px] text-[#0f172b] focus:outline-none focus:ring-2 focus:ring-[#f54900]/20 focus:border-[#f54900]/40 transition-colors" />
+                  <select value={startT} onChange={e => setStartT(e.target.value)}
+                    className="w-[110px] h-[36px] px-2 border border-[#e2e8f0] rounded-[8px] text-[13px] text-[#0f172b] bg-white focus:outline-none focus:ring-2 focus:ring-[#f54900]/20 focus:border-[#f54900]/40 transition-colors">
+                    {TIME_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* End */}
+              <div>
+                <p className="text-[11px] font-bold text-[#90a1b9] uppercase tracking-[0.5px] mb-2">
+                  End <span className="text-[#f54900]">*</span>
+                </p>
+                <div className="flex gap-2">
+                  <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+                    className="flex-1 h-[36px] px-3 border border-[#e2e8f0] rounded-[8px] text-[13px] text-[#0f172b] focus:outline-none focus:ring-2 focus:ring-[#f54900]/20 focus:border-[#f54900]/40 transition-colors" />
+                  <select value={endT} onChange={e => setEndT(e.target.value)}
+                    className="w-[110px] h-[36px] px-2 border border-[#e2e8f0] rounded-[8px] text-[13px] text-[#0f172b] bg-white focus:outline-none focus:ring-2 focus:ring-[#f54900]/20 focus:border-[#f54900]/40 transition-colors">
+                    {TIME_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Staff section */}
+            <div className="flex flex-col flex-1 p-5 min-h-0">
+              <p className="text-[11px] font-bold text-[#90a1b9] uppercase tracking-[0.5px] mb-3">
+                Staff <span className="text-[#f54900]">*</span>
+              </p>
+              {/* Staff search */}
+              <div className="relative mb-2">
+                <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 13 13" fill="none">
+                  <circle cx="5.5" cy="5.5" r="4" stroke="#90a1b9" strokeWidth="1.1"/>
+                  <path d="M9 9l3 3" stroke="#90a1b9" strokeWidth="1.1" strokeLinecap="round"/>
+                </svg>
+                <input type="text" value={staffQuery} onChange={e => setStaffQuery(e.target.value)}
+                  placeholder="Search staff…"
+                  className="w-full h-[34px] pl-8 pr-3 border border-[#e2e8f0] rounded-[8px] text-[13px] placeholder:text-[#90a1b9] focus:outline-none focus:ring-2 focus:ring-[#f54900]/20 focus:border-[#f54900]/40 transition-colors" />
+              </div>
+              {/* Staff list */}
+              <div className="flex-1 overflow-y-auto flex flex-col gap-1" style={{ minHeight: 120 }}>
+                {staffLoading ? (
+                  <div className="flex justify-center items-center py-8">
+                    <div className="w-5 h-5 rounded-full border-2 border-[#e2e8f0] border-t-[#f54900] animate-spin"/>
+                  </div>
+                ) : staffList.length === 0 ? (
+                  <p className="text-center text-[#90a1b9] text-[12px] py-6">No staff found.</p>
+                ) : (
+                  <>
+                    {staffList.map(s => {
+                      const isSel = selectedStaff?.id === s.id
+                      return (
+                        <button key={s.id} type="button" onClick={() => setSelectedStaff(isSel ? null : s)}
+                          className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-[8px] border text-left transition-colors ${
+                            isSel ? 'border-[#f54900]/40 bg-[#fff7f5]' : 'border-transparent hover:border-[#e2e8f0] hover:bg-[#f8fafc]'
+                          }`}>
+                          {s.profile_picture ? (
+                            <img src={s.profile_picture} alt={s.full_name}
+                              className="w-8 h-8 rounded-full object-cover shrink-0 border border-[#e2e8f0]"/>
+                          ) : (
+                            <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-white text-[11px] font-bold"
+                              style={{ backgroundColor: staffAvatarColor(s.id) }}>
+                              {staffInitials(s.full_name)}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-semibold text-[#0f172b] truncate">{s.full_name}</p>
+                            {(s.role || s.email) && (
+                              <p className="text-[11px] text-[#90a1b9] truncate">{s.role || s.email}</p>
+                            )}
+                          </div>
+                          {isSel && (
+                            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="shrink-0 text-[#f54900]">
+                              <path d="M2.5 7.5l3.5 3.5L12.5 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                        </button>
+                      )
+                    })}
+                    {staffNextUrl && (
+                      <button type="button" onClick={loadMoreStaff} disabled={staffLoadingMore}
+                        className="py-2 text-[12px] font-semibold text-[#f54900] hover:text-[#c73b00] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+                        {staffLoadingMore
+                          ? <><div className="w-3 h-3 rounded-full border-2 border-[#f54900]/30 border-t-[#f54900] animate-spin"/>Loading…</>
+                          : 'Load more staff'}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ── RIGHT: Job search ────────────────────────────────────────── */}
+          <div className="flex-1 flex flex-col min-h-0 p-5">
+            <p className="text-[11px] font-bold text-[#90a1b9] uppercase tracking-[0.5px] mb-3">
+              Job <span className="text-[#f54900]">*</span>
+            </p>
+
+            {/* Search input */}
+            <div className="relative mb-2">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 13 13" fill="none">
+                <circle cx="5.5" cy="5.5" r="4" stroke="#90a1b9" strokeWidth="1.1"/>
+                <path d="M9 9l3 3" stroke="#90a1b9" strokeWidth="1.1" strokeLinecap="round"/>
+              </svg>
+              <input type="text" value={jobQuery} onChange={e => setJobQuery(e.target.value)}
+                placeholder="Search by job ID, name or client…"
+                className="w-full h-[36px] pl-8 pr-3 border border-[#e2e8f0] rounded-[8px] text-[13px] placeholder:text-[#90a1b9] focus:outline-none focus:ring-2 focus:ring-[#f54900]/20 focus:border-[#f54900]/40 transition-colors" />
+            </div>
+
+            {/* Selected job chip */}
+            {selectedJob && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-[8px] bg-[#fff7f5] border border-[#f54900]/30 mb-2">
+                <div className="w-5 h-5 rounded-full bg-[#f54900] flex items-center justify-center shrink-0">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <path d="M1.5 5l2.5 2.5L8.5 2" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                  <span className="text-[12px] font-bold text-[#f54900] shrink-0">{selectedJob.job_id}</span>
+                  <span className="text-[12px] text-[#62748e] truncate">{selectedJob.client}</span>
+                </div>
+                <button type="button" onClick={() => setSelectedJob(null)}
+                  className="text-[#90a1b9] hover:text-[#314158] transition-colors shrink-0">
+                  <IconX />
+                </button>
+              </div>
+            )}
+
+            {/* Results */}
+            <div className="flex-1 overflow-y-auto flex flex-col gap-1">
+              {jobSearching ? (
+                <div className="flex justify-center py-10">
+                  <div className="w-5 h-5 rounded-full border-2 border-[#e2e8f0] border-t-[#f54900] animate-spin"/>
+                </div>
+              ) : !jobQuery.trim() ? (
+                <div className="flex flex-col items-center justify-center h-full gap-3 text-center pb-8">
+                  <div className="w-12 h-12 rounded-full bg-[#f8fafc] border border-[#e2e8f0] flex items-center justify-center">
+                    <IconBriefcase />
+                  </div>
+                  <div>
+                    <p className="text-[#314158] text-[13px] font-semibold">Search for a job</p>
+                    <p className="text-[#90a1b9] text-[12px] mt-0.5">Type a job ID, job name, or client</p>
+                  </div>
+                </div>
+              ) : jobResults.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full gap-2 pb-8">
+                  <p className="text-[#90a1b9] text-[13px]">No jobs found for "<span className="font-semibold">{jobQuery}</span>"</p>
+                </div>
+              ) : jobResults.map(job => {
+                const statusCfg = STATUS_CHIP[job.status] ?? DEFAULT_CHIP
+                const isSel     = selectedJob?.id === job.id
+                return (
+                  <button key={job.id} type="button" onClick={() => setSelectedJob(isSel ? null : job)}
+                    className={`flex items-start gap-3 w-full px-3 py-2.5 rounded-[8px] border text-left transition-colors ${
+                      isSel ? 'border-[#f54900]/40 bg-[#fff7f5]' : 'border-[#e2e8f0] bg-white hover:bg-[#f8fafc]'
+                    }`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${statusCfg.border} ${statusCfg.bg} ${statusCfg.text}`}>
+                          {job.job_id}
+                        </span>
+                        {job._isScheduled && (
+                          <span className="text-[10px] font-semibold text-[#22c55e] bg-[#f0fdf4] border border-[#86efac] px-1.5 py-0.5 rounded-full">
+                            Scheduled
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[13px] font-semibold text-[#0f172b] truncate">{job.client}</p>
+                      {job.insuredAddress && job.insuredAddress !== '—' && (
+                        <p className="text-[11px] text-[#90a1b9] truncate mt-0.5">{job.insuredAddress}</p>
+                      )}
+                    </div>
+                    {isSel && (
+                      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="shrink-0 text-[#f54900] mt-0.5">
+                        <path d="M2.5 7.5l3.5 3.5L12.5 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-[#f1f5f9] flex items-center gap-3 shrink-0">
+          <p className={`flex-1 text-[12px] ${error ? 'text-[#c10007] font-medium' : 'text-[#90a1b9]'}`}>
+            {error || (
+              selectedJob && selectedStaff
+                ? `Ready: ${selectedJob.job_id} → ${selectedStaff.full_name}`
+                : !selectedJob && !selectedStaff ? 'Select a job and staff member to continue'
+                : !selectedJob ? 'Select a job to continue'
+                : 'Select a staff member to continue'
+            )}
+          </p>
+          <div className="flex items-center gap-2">
+            <button onClick={onClose} disabled={saving}
+              className="px-5 py-[8px] rounded-[10px] border border-[#e2e8f0] text-[#314158] text-[13px] font-semibold hover:bg-[#f8fafc] transition-colors disabled:opacity-40">
+              Cancel
+            </button>
+            <button onClick={handleSave} disabled={saving || !selectedJob || !selectedStaff}
+              className="flex items-center gap-1.5 px-5 py-[8px] rounded-[10px] bg-[#f54900] hover:bg-[#c73b00] text-white text-[13px] font-semibold transition-colors shadow-[0_1px_3px_rgba(245,73,0,0.3)] disabled:opacity-40">
+              {saving
+                ? <><div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin"/>Saving…</>
+                : 'Save Schedule'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 export default function SchedulePage() {
   const navigate = useNavigate()
   const today    = new Date()
@@ -757,9 +1169,12 @@ export default function SchedulePage() {
   const [pendingDrop, setPendingDrop] = useState(null)  // { job, date, prefillTime? }
   const [modalSaving, setModalSaving] = useState(false)
 
+  // ── New Schedule modal (week view double-click) ────────────────────────────
+  const [newScheduleModal, setNewScheduleModal] = useState(null)  // { date, startTime }
+
   // ── Fetch all jobs (paginated) ─────────────────────────────────────────────
-  const fetchJobs = useCallback(async () => {
-    setLoading(true)
+  const fetchJobs = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
     let allResults = []
     let endpoint   = 'jobs/?page_size=100'
 
@@ -781,7 +1196,7 @@ export default function SchedulePage() {
     }
 
     setJobs(allResults.map(mapJob))
-    setLoading(false)
+    if (!silent) setLoading(false)
   }, [])
 
   useEffect(() => { fetchJobs() }, [fetchJobs])
@@ -920,18 +1335,28 @@ export default function SchedulePage() {
 
     const isoString = toISO(day.year, day.month, day.day, snappedTime)
 
-    // Optimistic update
+    // Default end = start + 1 h, snapped to 15 min, clamped to WEEK_END_MIN
+    const startMin      = minutesFromTime(snappedTime)
+    const defaultEndMin = Math.min(WEEK_END_MIN, snapEndTo15(startMin + 60))
+    const endTimeStr    = timeFromMinutes(defaultEndMin)
+    const isoEnd        = toISO(day.year, day.month, day.day, endTimeStr)
+
+    // Optimistic update — include endTime so card renders at the right size
     setJobs(prev => prev.map(j =>
       j.id === job.id
-        ? { ...j, scheduledDate: { year: day.year, month: day.month, day: day.day }, scheduledTime: snappedTime, _isScheduled: true }
+        ? { ...j, scheduledDate: { year: day.year, month: day.month, day: day.day }, scheduledTime: snappedTime, endTime: endTimeStr, _isScheduled: true }
         : j
     ))
 
-    const { ok } = await apiFetch(`jobs/${job.id}/schedule/`, {
-      method: 'PATCH',
-      body: JSON.stringify({ scheduled_datetime: isoString }),
-    })
-    if (!ok) setJobs(prev => prev.map(j => j.id === job.id ? job : j))
+    try {
+      const { ok } = await apiFetch(`jobs/${job.id}/schedule/`, {
+        method: 'PATCH',
+        body: JSON.stringify({ scheduled_datetime: isoString, end_time: isoEnd }),
+      })
+      if (!ok) setJobs(prev => prev.map(j => j.id === job.id ? job : j))
+    } catch {
+      setJobs(prev => prev.map(j => j.id === job.id ? job : j))
+    }
   }
 
   // ── Week resize — immediate save, no popup ────────────────────────────────
@@ -949,6 +1374,21 @@ export default function SchedulePage() {
     })
     if (!ok) setJobs(prev => prev.map(j => j.id === job.id ? job : j))
   }
+
+  // ── New Schedule modal handlers ───────────────────────────────────────────
+  const handleDoubleClickSlot = useCallback((day, startTime) => {
+    setNewScheduleModal({ date: day, startTime })
+  }, [])
+
+  const handleNewScheduleSave = useCallback(({ jobId, startDate, startTime, endTime }) => {
+    setJobs(prev => prev.map(j =>
+      j.id === jobId
+        ? { ...j, scheduledDate: startDate, scheduledTime: startTime, endTime, _isScheduled: true }
+        : j
+    ))
+    setNewScheduleModal(null)
+    fetchJobs(true)
+  }, [fetchJobs])
 
   // ── Panel drag handlers (unschedule) ───────────────────────────────────────
   const handlePanelDragOver  = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverPanel(true) }
@@ -996,6 +1436,16 @@ export default function SchedulePage() {
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <>
+      {/* New Schedule modal (week view double-click) */}
+      {newScheduleModal && (
+        <NewScheduleModal
+          date={newScheduleModal.date}
+          startTime={newScheduleModal.startTime}
+          onClose={() => setNewScheduleModal(null)}
+          onSaved={handleNewScheduleSave}
+        />
+      )}
+
       {/* Start-time modal (month / day only) */}
       {pendingDrop && (
         <TimePickerModal
@@ -1118,6 +1568,7 @@ export default function SchedulePage() {
                 onJobClick={handleChipClick}
                 onWeekDrop={handleWeekDrop}
                 onWeekResizeSave={handleWeekResizeSave}
+                onDoubleClickSlot={handleDoubleClickSlot}
               />
 
             ) : (
