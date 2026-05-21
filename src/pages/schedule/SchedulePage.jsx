@@ -13,7 +13,14 @@ import { apiFetch }                                  from '@/utils/apiFetch'
 const DAYS   = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTHS = ['January','February','March','April','May','June',
                 'July','August','September','October','November','December']
-const HOUR_HEIGHT = 64 // px per hour in week view
+
+const HOUR_HEIGHT      = 64   // px per hour in week view
+const WEEK_START_HOUR  = 6    // 6 AM
+const WEEK_END_HOUR    = 18   // 6 PM
+const WEEK_HOURS       = WEEK_END_HOUR - WEEK_START_HOUR  // 12
+const WEEK_START_MIN   = WEEK_START_HOUR * 60             // 360
+const WEEK_END_MIN     = WEEK_END_HOUR   * 60             // 1080
+const WEEK_GRID_H      = HOUR_HEIGHT * WEEK_HOURS         // 768 px
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function daysInMonth(year, month)     { return new Date(year, month + 1, 0).getDate() }
@@ -24,10 +31,10 @@ function parseISO(iso) {
   const d = new Date(iso)
   if (isNaN(d)) return null
   return {
-    year:    d.getFullYear(),
-    month:   d.getMonth(),
-    day:     d.getDate(),
-    time:    `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`,
+    year:  d.getFullYear(),
+    month: d.getMonth(),
+    day:   d.getDate(),
+    time:  `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`,
   }
 }
 
@@ -44,9 +51,18 @@ function minutesFromTime(time) {
 
 function timeFromMinutes(totalMinutes) {
   const clamped = Math.max(0, Math.min(1439, totalMinutes))
-  const h = Math.floor(clamped / 60)
-  const m = clamped % 60
-  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`
+  return `${String(Math.floor(clamped / 60)).padStart(2,'0')}:${String(clamped % 60).padStart(2,'0')}`
+}
+
+// Snap to nearest 15-min mark, clamped within 6 AM–6 PM for start times
+function snapStartTo15(totalMinutes) {
+  const s = Math.round(totalMinutes / 15) * 15
+  return Math.max(WEEK_START_MIN, Math.min(WEEK_END_MIN - 15, s))
+}
+
+// Snap end time — must be at least 15 min after start, max 6 PM
+function snapEndTo15(totalMinutes) {
+  return Math.round(totalMinutes / 15) * 15
 }
 
 function formatHourLabel(h) {
@@ -156,7 +172,7 @@ function IconBriefcase() { return <svg width="13" height="13" viewBox="0 0 13 13
 function IconCalPlus()   { return <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.2"/><path d="M5 1.5v2M10 1.5v2M1 6.5h13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M7.5 9v3M6 10.5h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> }
 function IconX()         { return <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg> }
 
-// ── Start-time picker modal (month / week drag-drop) ──────────────────────────
+// ── Start-time picker modal (month / day drag-drop only) ──────────────────────
 function TimePickerModal({ job, date, prefillTime, saving, onConfirm, onCancel }) {
   const [time, setTime] = useState(prefillTime ?? job.scheduledTime ?? '09:00')
   const label = `${MONTHS[date.month].slice(0,3)} ${date.day}, ${date.year}`
@@ -190,9 +206,7 @@ function TimePickerModal({ job, date, prefillTime, saving, onConfirm, onCancel }
           </button>
           <button onClick={() => onConfirm(time)} disabled={saving}
             className="flex-1 py-[9px] rounded-[10px] bg-[#f54900] hover:bg-[#c73b00] text-white text-[14px] font-semibold transition-colors shadow-[0_1px_3px_rgba(245,73,0,0.3)] disabled:opacity-60 flex items-center justify-center gap-2">
-            {saving
-              ? <><div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin"/>Saving…</>
-              : 'Confirm'}
+            {saving ? <><div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin"/>Saving…</> : 'Confirm'}
           </button>
         </div>
       </div>
@@ -200,56 +214,18 @@ function TimePickerModal({ job, date, prefillTime, saving, onConfirm, onCancel }
   )
 }
 
-// ── End-time picker modal (week view resize) ──────────────────────────────────
-function EndTimeModal({ job, prefillTime, saving, onConfirm, onCancel }) {
-  const [time, setTime] = useState(prefillTime || '')
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172b]/40 backdrop-blur-sm"
-      onClick={onCancel}>
-      <div className="bg-white rounded-[16px] shadow-[0_20px_60px_rgba(15,23,43,0.22)] w-[340px] overflow-hidden"
-        onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#f1f5f9]">
-          <div>
-            <h3 className="text-[#0f172b] font-bold text-[16px]">Set End Time</h3>
-            <p className="text-[#90a1b9] text-[12px] mt-0.5">{job.job_id} · {job.client}</p>
-          </div>
-          <button onClick={onCancel} className="text-[#90a1b9] hover:text-[#314158] transition-colors"><IconX /></button>
-        </div>
-        <div className="px-5 py-5 flex flex-col gap-4">
-          <div className="flex items-center justify-between p-3 bg-[#f8fafc] rounded-[10px] border border-[#e2e8f0]">
-            <span className="text-[#62748e] text-[13px]">Start Time</span>
-            <span className="text-[#0f172b] text-[13px] font-semibold">{job.scheduledTime}</span>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[#0f172b] text-[13px] font-semibold">End Time</label>
-            <input type="time" value={time} onChange={e => setTime(e.target.value)}
-              className="w-full h-[38px] px-3 rounded-[8px] border border-[#e2e8f0] text-[14px] text-[#0f172b] focus:outline-none focus:ring-2 focus:ring-[#f54900]/25 focus:border-[#f54900]/60 transition-colors" />
-          </div>
-        </div>
-        <div className="flex gap-3 px-5 pb-5">
-          <button onClick={onCancel} disabled={saving}
-            className="flex-1 py-[9px] rounded-[10px] border border-[#e2e8f0] text-[#314158] text-[14px] font-semibold hover:bg-[#f8fafc] transition-colors disabled:opacity-40">
-            Cancel
-          </button>
-          <button onClick={() => onConfirm(time)} disabled={saving || !time}
-            className="flex-1 py-[9px] rounded-[10px] bg-[#f54900] hover:bg-[#c73b00] text-white text-[14px] font-semibold transition-colors shadow-[0_1px_3px_rgba(245,73,0,0.3)] disabled:opacity-60 flex items-center justify-center gap-2">
-            {saving
-              ? <><div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin"/>Saving…</>
-              : 'Confirm'}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Hover detail popup (month / day views) ────────────────────────────────────
+// ── Smart hover detail popup (month / day / week views) ───────────────────────
 function JobDetailPopup({ job, position }) {
   if (!position) return null
+  // Flip below the card if too close to top of viewport
+  const showAbove  = position.top > 260
+  const transform  = showAbove ? 'translate(-50%, calc(-100% - 8px))' : 'translate(-50%, 8px)'
+  // Clamp horizontally so popup never goes off-screen
+  const safeLeft   = Math.max(148, Math.min(position.left, window.innerWidth - 148))
   return (
-    <div className="fixed z-50 bg-white rounded-[12px] shadow-[0_10px_40px_rgba(15,23,43,0.3)] border border-[#e2e8f0] p-4 w-[280px]"
-      style={{ top: position.top, left: position.left, transform: 'translate(-50%, calc(-100% - 8px))', pointerEvents: 'none' }}>
-      <div className="flex items-start justify-between gap-2 mb-3">
+    <div className="fixed z-[60] bg-white rounded-[12px] shadow-[0_10px_40px_rgba(15,23,43,0.3)] border border-[#e2e8f0] p-4 w-[280px]"
+      style={{ top: position.top, left: safeLeft, transform, pointerEvents: 'none' }}>
+      <div className="flex items-start gap-2 mb-3">
         <div>
           <span className="inline-block text-[11px] font-bold px-2 py-1 rounded-full bg-[#f8fafc] border border-[#e2e8f0] text-[#314158]">{job.job_id}</span>
           <p className="text-[13px] font-bold text-[#0f172b] mt-1.5">{job.client}</p>
@@ -265,7 +241,7 @@ function JobDetailPopup({ job, position }) {
           <span className="font-semibold text-[#0f172b]">{job.priority}</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-[#62748e]">Employee:</span>
+          <span className="text-[#62748e]">Assigned:</span>
           <span className="font-semibold text-[#0f172b]">{job.employeeName}</span>
         </div>
         <div className="flex items-center justify-between">
@@ -307,15 +283,15 @@ function JobChip({ job, onDragStart, onClick }) {
           <span className={`inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${statusConfig.border} ${statusConfig.bg} ${statusConfig.text}`}>
             {job.job_id}
           </span>
-          <span className="text-[9px] font-semibold text-[#334155] line-clamp-1">{job.employeeName}</span>
+          <span className="text-[9px] font-bold text-[#0f172b] line-clamp-1">{job.employeeName}</span>
         </div>
-        <p className="text-[11px] font-semibold text-[#0f172b] leading-[14px] break-words">{job.client}</p>
+        <p className="text-[11px] font-bold text-[#0f172b] leading-[14px] break-words">{job.client}</p>
         {job.insuredAddress && job.insuredAddress !== '—' && (
-          <p className="text-[9px] text-[#62748e] leading-[12px] break-words line-clamp-2">{job.insuredAddress}</p>
+          <p className="text-[10px] font-medium text-[#314158] leading-[13px] break-words line-clamp-2">{job.insuredAddress}</p>
         )}
         <div className="flex items-center justify-between gap-1">
-          <span className="flex items-center gap-0.5 text-[9px] text-[#475569]"><IconClock /> {job.scheduledTime}</span>
-          <span className="text-[8px] font-semibold px-1 py-0.5 rounded-full bg-white/50 text-[#314158]">{job.priority}</span>
+          <span className="flex items-center gap-0.5 text-[9px] font-semibold text-[#0f172b]"><IconClock /> {job.scheduledTime}</span>
+          <span className="text-[8px] font-bold px-1 py-0.5 rounded-full bg-white/60 text-[#0f172b]">{job.priority}</span>
         </div>
       </div>
       {popupPosition && <JobDetailPopup job={job} position={popupPosition} />}
@@ -332,31 +308,25 @@ function UnscheduledRow({ job, onDragStart }) {
       <span className="text-[#cad5e2] shrink-0"><IconGrip /></span>
       <div className="flex-1 min-w-0">
         <p className="text-[#0f172b] text-[12px] font-bold truncate">{job.job_id}</p>
-        <p className="text-[#62748e] text-[11px] truncate">{job.client}</p>
+        <p className="text-[#314158] text-[11px] font-medium truncate">{job.client}</p>
       </div>
       <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${p}`}>{job.priority}</span>
     </div>
   )
 }
 
-// ── Week view: overlap layout algorithm ──────────────────────────────────────
-// Returns [{ job, lane, totalCols }] where lane = column index, totalCols = total
-// columns needed in this job's overlap group. Uses greedy interval-graph colouring.
+// ── Week view: overlap layout algorithm ───────────────────────────────────────
 function computeLayout(dayJobs) {
   if (!dayJobs.length) return []
-
   const enriched = dayJobs
     .map(j => ({
       job:      j,
       startMin: minutesFromTime(j.scheduledTime),
-      endMin:   j.endTime
-        ? minutesFromTime(j.endTime)
-        : minutesFromTime(j.scheduledTime) + 60,
+      endMin:   j.endTime ? minutesFromTime(j.endTime) : minutesFromTime(j.scheduledTime) + 60,
     }))
     .sort((a, b) => a.startMin - b.startMin || b.endMin - a.endMin)
 
-  // Assign each job to the first free lane
-  const laneEnds = [] // laneEnds[i] = endMin of last job placed in lane i
+  const laneEnds = []
   const placed = enriched.map(item => {
     let lane = laneEnds.findIndex(end => end <= item.startMin)
     if (lane === -1) lane = laneEnds.length
@@ -364,30 +334,32 @@ function computeLayout(dayJobs) {
     return { ...item, lane }
   })
 
-  // totalCols for each job = max lane among all jobs it overlaps + 1
   return placed.map(p => {
-    const overlapping = placed.filter(
-      q => q.startMin < p.endMin && q.endMin > p.startMin
-    )
-    const totalCols = Math.max(...overlapping.map(q => q.lane)) + 1
+    const overlapping = placed.filter(q => q.startMin < p.endMin && q.endMin > p.startMin)
+    const totalCols   = Math.max(...overlapping.map(q => q.lane)) + 1
     return { job: p.job, lane: p.lane, totalCols }
   })
 }
 
 // ── Week view: individual job card ────────────────────────────────────────────
-function WeekJobCard({ job, top, height, lane, totalCols, scrollRef, onDragStart, onClick, onResizeEnd }) {
-  const employeeColor  = getEmployeeColor(job.employeeId)
-  const statusConfig   = STATUS_CHIP[job.status] ?? DEFAULT_CHIP
-  const [liveHeight, setLiveHeight]   = useState(height)
+function WeekJobCard({
+  job, top, height, lane, totalCols, isClippedTop, isClippedBottom,
+  scrollRef, onDragStart, onClick, onResizeSave,
+}) {
+  const employeeColor = getEmployeeColor(job.employeeId)
+  const statusConfig  = STATUS_CHIP[job.status] ?? DEFAULT_CHIP
+  const [liveHeight,  setLiveHeight]  = useState(height)
   const [isResizing,  setIsResizing]  = useState(false)
+  const [popupPos,    setPopupPos]    = useState(null)
   const currentHeightRef = useRef(height)
+  const cardRef          = useRef(null)
 
-  // Sync when parent recalculates height (e.g. after save)
   useEffect(() => {
     currentHeightRef.current = height
     setLiveHeight(height)
   }, [height])
 
+  // ── Resize (scroll-aware, snaps to 15 min, saves immediately) ─────────────
   const handleResizeMouseDown = useCallback((e) => {
     e.preventDefault()
     e.stopPropagation()
@@ -399,9 +371,8 @@ function WeekJobCard({ job, top, height, lane, totalCols, scrollRef, onDragStart
     setIsResizing(true)
 
     const onMove = (ev) => {
-      // Account for any scrolling that happened since drag started
       const scrollDelta = (scrollRef?.current?.scrollTop ?? 0) - initialScrollTop
-      const newH = Math.max(30, startH + (ev.clientY - startY) + scrollDelta)
+      const newH = Math.max(HOUR_HEIGHT / 4, startH + (ev.clientY - startY) + scrollDelta)
       currentHeightRef.current = newH
       setLiveHeight(newH)
     }
@@ -410,106 +381,161 @@ function WeekJobCard({ job, top, height, lane, totalCols, scrollRef, onDragStart
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup',   onUp)
       setIsResizing(false)
-      const durationMin = Math.round(currentHeightRef.current / HOUR_HEIGHT * 60 / 5) * 5
-      const endMin = Math.max(startMin + 15, Math.min(1439, startMin + durationMin))
-      onResizeEnd(timeFromMinutes(endMin))
+      // Snap end to nearest 15-min, min 15 min after start, max 6 PM
+      const rawEndMin   = startMin + currentHeightRef.current / HOUR_HEIGHT * 60
+      const snappedEnd  = snapEndTo15(rawEndMin)
+      const clampedEnd  = Math.max(startMin + 15, Math.min(WEEK_END_MIN, snappedEnd))
+      onResizeSave(timeFromMinutes(clampedEnd))
     }
 
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup',   onUp)
-  }, [job.scheduledTime, onResizeEnd, scrollRef])
+  }, [job.scheduledTime, onResizeSave, scrollRef])
 
-  const showClient   = liveHeight > 42
-  const showTime     = liveHeight > 58
-  const showEmployee = liveHeight > 76
-  const showAddress  = liveHeight > 100
+  // ── Hover popup ────────────────────────────────────────────────────────────
+  const handleMouseEnter = () => {
+    if (cardRef.current) {
+      const rect = cardRef.current.getBoundingClientRect()
+      setPopupPos({ top: rect.top + window.scrollY, left: rect.left + rect.width / 2 + window.scrollX })
+    }
+  }
 
-  // Side-by-side positioning when overlapping
-  const GAP    = 2 // px gap between adjacent cards
-  const colPct = 100 / totalCols
+  const showClient   = liveHeight > 30
+  const showTime     = liveHeight > 44
+  const showEmployee = liveHeight > 58
+  const showAddress  = liveHeight > 78
+
+  const GAP      = 2
+  const colPct   = 100 / totalCols
   const leftPct  = lane * colPct
   const widthPct = colPct
 
   return (
-    <div
-      draggable={!isResizing}
-      onDragStart={e => { if (isResizing) return; e.stopPropagation(); onDragStart(e, job) }}
-      onClick={e => { e.stopPropagation(); onClick(job) }}
-      style={{
-        position: 'absolute',
-        top,
-        left:   `calc(${leftPct}% + ${lane === 0 ? GAP : GAP / 2}px)`,
-        width:  `calc(${widthPct}% - ${lane === 0 || lane === totalCols - 1 ? GAP * 1.5 : GAP}px)`,
-        height: liveHeight,
-        zIndex: isResizing ? 30 : lane + 2,
-      }}
-      className={[
-        'rounded-[8px] border flex flex-col overflow-hidden select-none transition-shadow',
-        employeeColor.bg, employeeColor.border,
-        isResizing
-          ? 'cursor-ns-resize shadow-[0_4px_20px_rgba(15,23,43,0.2)]'
-          : 'cursor-pointer hover:brightness-95 hover:shadow-[0_2px_8px_rgba(15,23,43,0.12)]',
-      ].join(' ')}
-    >
-      {/* Card body */}
-      <div className="flex-1 px-2 pt-1.5 pb-0 min-h-0 overflow-hidden">
-        {/* Status badge + job id */}
-        <div className="flex items-center gap-1 flex-wrap">
-          <span className={`inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${statusConfig.border} ${statusConfig.bg} ${statusConfig.text}`}>
-            {job.job_id}
-          </span>
-          {showEmployee && (
-            <span className="text-[9px] font-semibold text-[#334155] truncate max-w-[80px]">{job.employeeName}</span>
+    <>
+      <div
+        ref={cardRef}
+        draggable={!isResizing}
+        onDragStart={e => { if (isResizing) return; e.stopPropagation(); onDragStart(e, job) }}
+        onClick={e => { e.stopPropagation(); onClick(job) }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={() => setPopupPos(null)}
+        style={{
+          position: 'absolute',
+          top,
+          left:   `calc(${leftPct}% + ${lane === 0 ? GAP : GAP / 2}px)`,
+          width:  `calc(${widthPct}% - ${lane === 0 || lane === totalCols - 1 ? GAP * 1.5 : GAP}px)`,
+          height: liveHeight,
+          zIndex: isResizing ? 30 : lane + 2,
+        }}
+        className={[
+          'border flex flex-col overflow-hidden select-none transition-shadow',
+          isClippedTop    ? 'rounded-t-none'    : 'rounded-t-[8px]',
+          isClippedBottom ? 'rounded-b-none'    : 'rounded-b-[8px]',
+          employeeColor.bg, employeeColor.border,
+          isResizing
+            ? 'cursor-ns-resize shadow-[0_4px_20px_rgba(15,23,43,0.2)]'
+            : 'cursor-pointer hover:brightness-95 hover:shadow-[0_2px_8px_rgba(15,23,43,0.12)]',
+        ].join(' ')}
+      >
+        {/* Clipped-top indicator */}
+        {isClippedTop && (
+          <div className="h-[3px] shrink-0 bg-current opacity-40 bg-stripes" />
+        )}
+
+        {/* Card body */}
+        <div className="flex-1 px-1.5 pt-1 pb-0 min-h-0 overflow-hidden">
+          <div className="flex items-center gap-1 flex-wrap">
+            <span className={`inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${statusConfig.border} ${statusConfig.bg} ${statusConfig.text}`}>
+              {job.job_id}
+            </span>
+            {showEmployee && (
+              <span className="text-[9px] font-bold text-[#0f172b] truncate">{job.employeeName}</span>
+            )}
+          </div>
+
+          {showClient && (
+            <p className="text-[10px] font-bold text-[#0f172b] leading-[13px] mt-0.5 truncate">{job.client}</p>
+          )}
+
+          {showTime && (
+            <div className="flex items-center gap-0.5 text-[9px] font-semibold text-[#0f172b] mt-0.5">
+              <IconClock />
+              <span>{job.scheduledTime}{job.endTime ? ` – ${job.endTime}` : ''}</span>
+            </div>
+          )}
+
+          {showAddress && job.insuredAddress !== '—' && (
+            <p className="text-[9px] font-medium text-[#314158] mt-0.5 leading-[12px] line-clamp-2">{job.insuredAddress}</p>
           )}
         </div>
 
-        {showClient && (
-          <p className="text-[11px] font-semibold text-[#0f172b] leading-[14px] mt-1 truncate">{job.client}</p>
+        {/* Clipped-bottom indicator */}
+        {isClippedBottom && (
+          <div className="h-[3px] shrink-0 bg-current opacity-40" />
         )}
 
-        {showTime && (
-          <div className="flex items-center gap-0.5 text-[9px] text-[#475569] mt-0.5">
-            <IconClock />
-            <span>{job.scheduledTime}{job.endTime ? ` – ${job.endTime}` : ''}</span>
+        {/* Resize handle */}
+        {!isClippedBottom && (
+          <div
+            onMouseDown={handleResizeMouseDown}
+            onClick={e => e.stopPropagation()}
+            className="h-3 cursor-ns-resize flex items-center justify-center shrink-0 hover:bg-black/5 transition-colors"
+          >
+            <div className="w-8 h-[3px] rounded-full bg-current opacity-20" />
           </div>
         )}
-
-        {showAddress && job.insuredAddress !== '—' && (
-          <p className="text-[9px] text-[#62748e] mt-0.5 leading-[12px] line-clamp-2">{job.insuredAddress}</p>
-        )}
       </div>
 
-      {/* Resize handle */}
-      <div
-        onMouseDown={handleResizeMouseDown}
-        onClick={e => e.stopPropagation()}
-        className="h-3 cursor-ns-resize flex items-center justify-center shrink-0 hover:bg-black/5 transition-colors"
-        title="Drag to set end time"
-      >
-        <div className="w-8 h-[3px] rounded-full bg-current opacity-20" />
-      </div>
+      {popupPos && <JobDetailPopup job={job} position={popupPos} />}
+    </>
+  )
+}
+
+// ── Week view: current time red line ──────────────────────────────────────────
+function CurrentTimeLine() {
+  const [now, setNow] = useState(() => new Date())
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000)
+    return () => clearInterval(id)
+  }, [])
+
+  const totalMin = now.getHours() * 60 + now.getMinutes()
+  if (totalMin < WEEK_START_MIN || totalMin >= WEEK_END_MIN) return null
+
+  const top = (totalMin - WEEK_START_MIN) / 60 * HOUR_HEIGHT
+
+  return (
+    <div
+      style={{ position: 'absolute', top, left: 0, right: 0, zIndex: 40, pointerEvents: 'none' }}
+      className="flex items-center"
+    >
+      <div className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0 -ml-[5px] shadow-[0_0_0_3px_rgba(239,68,68,0.15)]" />
+      <div className="flex-1 h-[2px] bg-red-500 opacity-90" />
     </div>
   )
 }
 
 // ── Week view: time grid ───────────────────────────────────────────────────────
-function WeekView({ days, jobs, today, draggingJobRef, onDragStart, onJobClick, onWeekDrop, onResizeEnd }) {
+function WeekView({ days, jobs, today, draggingJobRef, onDragStart, onJobClick, onWeekDrop, onWeekResizeSave }) {
   const scrollRef = useRef(null)
   const gridRef   = useRef(null)
   const [dragOverCol,  setDragOverCol]  = useState(null)
   const [dragOverMins, setDragOverMins] = useState(null)
 
-  // Scroll to 7 AM on mount
+  // Scroll to beginning of 6 AM area on mount
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = 7 * HOUR_HEIGHT - 32
+    if (scrollRef.current) scrollRef.current.scrollTop = 0
   }, [])
 
+  // Convert mouse Y to snapped minutes (offset from WEEK_START_MIN, snap to 15)
   const getMinsFromEvent = useCallback((e) => {
-    if (!scrollRef.current || !gridRef.current) return 0
+    if (!scrollRef.current || !gridRef.current) return WEEK_START_MIN
     const scrollTop = scrollRef.current.scrollTop
     const gridTop   = gridRef.current.getBoundingClientRect().top
     const relY      = e.clientY - gridTop + scrollTop
-    return Math.max(0, Math.min(23 * 60 + 45, Math.round(relY / HOUR_HEIGHT * 60 / 15) * 15))
+    const rawMins   = relY / HOUR_HEIGHT * 60 + WEEK_START_MIN
+    return snapStartTo15(rawMins)
   }, [])
 
   const isToday = (day) =>
@@ -522,8 +548,7 @@ function WeekView({ days, jobs, today, draggingJobRef, onDragStart, onJobClick, 
 
       {/* Sticky day headers */}
       <div className="flex border-b border-[#e2e8f0] bg-white shrink-0 z-10">
-        {/* Gutter spacer */}
-        <div className="w-[52px] shrink-0 border-r border-[#f1f5f9]" />
+        <div className="w-[56px] shrink-0 border-r border-[#f1f5f9]" />
         {days.map((day, i) => (
           <div key={i} className={`flex-1 py-2 flex flex-col items-center border-r border-[#f1f5f9] last:border-r-0 ${isToday(day) ? 'bg-[#fff9f7]' : ''}`}>
             <span className="text-[10px] font-bold text-[#62748e] uppercase tracking-wide">
@@ -538,31 +563,47 @@ function WeekView({ days, jobs, today, draggingJobRef, onDragStart, onJobClick, 
         ))}
       </div>
 
-      {/* Scrollable time body — paddingTop gives 12 AM label breathing room */}
+      {/* Scrollable body */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        <div className="flex" style={{ height: HOUR_HEIGHT * 24 + 12, paddingTop: 12 }}>
+        {/* paddingTop gives the first hour label breathing room */}
+        <div className="flex" style={{ height: WEEK_GRID_H + 12, paddingTop: 12 }}>
 
           {/* Time gutter */}
-          <div className="w-[52px] shrink-0 relative border-r border-[#f1f5f9]" style={{ height: '100%' }}>
-            {Array.from({ length: 24 }, (_, h) => (
-              <div key={h} style={{ position: 'absolute', top: h * HOUR_HEIGHT - 8, right: 0, left: 0, paddingRight: 8 }}
-                className="flex items-start justify-end">
-                <span className="text-[10px] text-[#90a1b9] font-medium whitespace-nowrap leading-none">
-                  {formatHourLabel(h)}
-                </span>
-              </div>
-            ))}
+          <div className="w-[56px] shrink-0 relative border-r border-[#f1f5f9]" style={{ height: '100%' }}>
+            {Array.from({ length: WEEK_HOURS + 1 }, (_, i) => {
+              const h = WEEK_START_HOUR + i
+              return (
+                <div key={h}
+                  style={{ position: 'absolute', top: i * HOUR_HEIGHT - 8, right: 0, left: 0, paddingRight: 8 }}
+                  className="flex items-start justify-end">
+                  <span className="text-[10px] text-[#90a1b9] font-medium whitespace-nowrap leading-none">
+                    {formatHourLabel(h)}
+                  </span>
+                </div>
+              )
+            })}
           </div>
 
           {/* Day columns */}
-          <div ref={gridRef} className="flex-1 grid grid-cols-7" style={{ height: '100%' }}>
+          <div ref={gridRef} className="flex-1 grid grid-cols-7 relative" style={{ height: '100%' }}>
+
+            {/* Current time line — full-width, on top of all columns */}
+            <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 40 }}>
+              <CurrentTimeLine />
+            </div>
+
             {days.map((day, colIdx) => {
-              const dayJobs = jobs.filter(j =>
-                j._isScheduled &&
-                j.scheduledDate?.year  === day.year  &&
-                j.scheduledDate?.month === day.month &&
-                j.scheduledDate?.day   === day.day
-              )
+              // Only jobs that overlap with [6 AM, 6 PM]
+              const dayJobs = jobs.filter(j => {
+                if (!j._isScheduled) return false
+                if (j.scheduledDate?.year  !== day.year)  return false
+                if (j.scheduledDate?.month !== day.month) return false
+                if (j.scheduledDate?.day   !== day.day)   return false
+                const s = minutesFromTime(j.scheduledTime)
+                const en = j.endTime ? minutesFromTime(j.endTime) : s + 60
+                return en > WEEK_START_MIN && s < WEEK_END_MIN
+              })
+
               const layout = computeLayout(dayJobs)
               const isOver = dragOverCol === colIdx
 
@@ -579,30 +620,41 @@ function WeekView({ days, jobs, today, draggingJobRef, onDragStart, onJobClick, 
                   onDragLeave={() => setDragOverCol(null)}
                   onDrop={e => {
                     e.preventDefault()
-                    const mins = getMinsFromEvent(e)
+                    const snappedMins = getMinsFromEvent(e)
                     setDragOverCol(null)
                     setDragOverMins(null)
-                    onWeekDrop(day, timeFromMinutes(mins))
+                    onWeekDrop(day, timeFromMinutes(snappedMins))
                   }}
                   onDragEnd={() => setDragOverCol(null)}
                 >
                   {/* Hour lines */}
-                  {Array.from({ length: 24 }, (_, h) => (
-                    <div key={h} style={{ top: h * HOUR_HEIGHT }}
-                      className="absolute left-0 right-0 border-t border-[#f1f5f9] pointer-events-none" />
+                  {Array.from({ length: WEEK_HOURS }, (_, i) => (
+                    <div key={i} style={{ top: i * HOUR_HEIGHT }}
+                      className="absolute left-0 right-0 border-t border-[#e2e8f0] pointer-events-none" />
                   ))}
-                  {/* Half-hour lines */}
-                  {Array.from({ length: 24 }, (_, h) => (
-                    <div key={`hh${h}`} style={{ top: h * HOUR_HEIGHT + HOUR_HEIGHT / 2 }}
-                      className="absolute left-0 right-0 border-t border-[#f8fafc] pointer-events-none" />
-                  ))}
+                  {/* 15-min sub-lines (×3 per hour: at 15, 30, 45 min) */}
+                  {Array.from({ length: WEEK_HOURS }, (_, i) => [1, 2, 3].map(q => (
+                    <div key={`${i}-${q}`}
+                      style={{ top: i * HOUR_HEIGHT + q * (HOUR_HEIGHT / 4) }}
+                      className={`absolute left-0 right-0 pointer-events-none ${
+                        q === 2
+                          ? 'border-t border-dashed border-[#e9ecef]'   // 30-min slightly visible
+                          : 'border-t border-dashed border-[#f3f4f6]'   // 15/45-min very subtle
+                      }`}
+                    />
+                  )))}
+                  {/* Bottom boundary */}
+                  <div style={{ top: WEEK_HOURS * HOUR_HEIGHT }}
+                    className="absolute left-0 right-0 border-t border-[#e2e8f0] pointer-events-none" />
 
-                  {/* Job cards — laid out with overlap algorithm */}
+                  {/* Job cards */}
                   {layout.map(({ job, lane, totalCols }) => {
-                    const startMin = minutesFromTime(job.scheduledTime)
-                    const endMin   = job.endTime ? minutesFromTime(job.endTime) : startMin + 60
-                    const cardTop  = startMin / 60 * HOUR_HEIGHT
-                    const cardH    = Math.max(30, (endMin - startMin) / 60 * HOUR_HEIGHT)
+                    const startMin     = minutesFromTime(job.scheduledTime)
+                    const endMin       = job.endTime ? minutesFromTime(job.endTime) : startMin + 60
+                    const clampedStart = Math.max(WEEK_START_MIN, startMin)
+                    const clampedEnd   = Math.min(WEEK_END_MIN,   endMin)
+                    const cardTop      = (clampedStart - WEEK_START_MIN) / 60 * HOUR_HEIGHT
+                    const cardH        = Math.max(HOUR_HEIGHT / 4, (clampedEnd - clampedStart) / 60 * HOUR_HEIGHT)
                     return (
                       <WeekJobCard
                         key={job.id}
@@ -611,10 +663,12 @@ function WeekView({ days, jobs, today, draggingJobRef, onDragStart, onJobClick, 
                         height={cardH}
                         lane={lane}
                         totalCols={totalCols}
+                        isClippedTop={startMin < WEEK_START_MIN}
+                        isClippedBottom={endMin > WEEK_END_MIN}
                         scrollRef={scrollRef}
                         onDragStart={onDragStart}
                         onClick={onJobClick}
-                        onResizeEnd={(prefillTime) => onResizeEnd(job, prefillTime)}
+                        onResizeSave={(endTime) => onWeekResizeSave(job, endTime)}
                       />
                     )
                   })}
@@ -622,7 +676,7 @@ function WeekView({ days, jobs, today, draggingJobRef, onDragStart, onJobClick, 
                   {/* Drop time indicator */}
                   {isOver && dragOverMins !== null && (
                     <div
-                      style={{ top: dragOverMins / 60 * HOUR_HEIGHT }}
+                      style={{ top: (dragOverMins - WEEK_START_MIN) / 60 * HOUR_HEIGHT }}
                       className="absolute left-0 right-0 h-[2px] bg-[#f54900] pointer-events-none z-30"
                     >
                       <span className="absolute -top-[18px] left-1 text-[10px] text-[#f54900] font-bold bg-white px-1.5 py-0.5 rounded-md shadow-sm border border-[#f54900]/20">
@@ -649,7 +703,7 @@ export default function SchedulePage() {
   const [viewYear,  setViewYear]  = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())
   const [viewDay,   setViewDay]   = useState(today.getDate())
-  const [viewMode,  setViewMode]  = useState('week') // default: week
+  const [viewMode,  setViewMode]  = useState('week')
 
   // ── Data state ─────────────────────────────────────────────────────────────
   const [jobs,    setJobs]    = useState([])
@@ -660,11 +714,9 @@ export default function SchedulePage() {
   const [dragOverDay,   setDragOverDay]   = useState(null)
   const [dragOverPanel, setDragOverPanel] = useState(false)
 
-  // ── Modal state ────────────────────────────────────────────────────────────
-  const [pendingDrop,   setPendingDrop]   = useState(null)  // { job, date, prefillTime? }
-  const [modalSaving,   setModalSaving]   = useState(false)
-  const [pendingResize, setPendingResize] = useState(null)  // { job, prefillTime }
-  const [resizeSaving,  setResizeSaving]  = useState(false)
+  // ── Modal state (month / day view only) ────────────────────────────────────
+  const [pendingDrop, setPendingDrop] = useState(null)  // { job, date, prefillTime? }
+  const [modalSaving, setModalSaving] = useState(false)
 
   // ── Fetch all jobs (paginated) ─────────────────────────────────────────────
   const fetchJobs = useCallback(async () => {
@@ -695,10 +747,11 @@ export default function SchedulePage() {
 
   useEffect(() => { fetchJobs() }, [fetchJobs])
 
-  // ── Navigation helpers ─────────────────────────────────────────────────────
+  // ── Navigation helpers — week starts Monday ────────────────────────────────
   const getWeekStart = (year, month, day) => {
-    const d = new Date(year, month, day)
-    d.setDate(d.getDate() - d.getDay())
+    const d   = new Date(year, month, day)
+    const dow = d.getDay() // 0=Sun, 1=Mon … 6=Sat
+    d.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1))
     return d
   }
 
@@ -746,9 +799,7 @@ export default function SchedulePage() {
   const scheduledOnDay = (year, month, day) =>
     jobs.filter(j =>
       j._isScheduled &&
-      j.scheduledDate?.year  === year  &&
-      j.scheduledDate?.month === month &&
-      j.scheduledDate?.day   === day
+      j.scheduledDate?.year === year && j.scheduledDate?.month === month && j.scheduledDate?.day === day
     ).sort((a, b) => (a.scheduledTime > b.scheduledTime ? 1 : -1))
 
   const groupJobsByTime = (list) => {
@@ -758,7 +809,7 @@ export default function SchedulePage() {
       acc[t].push(job)
       return acc
     }, {})
-    return Object.keys(groups).sort().map(time => ({ time, jobs: groups[time] }))
+    return Object.keys(groups).sort().map(t => ({ time: t, jobs: groups[t] }))
   }
 
   const isToday = (year, month, day) =>
@@ -767,9 +818,9 @@ export default function SchedulePage() {
   // ── Calendar grid cells ────────────────────────────────────────────────────
   let rows = []
   if (viewMode === 'month') {
-    const firstDay   = firstDayOfMonth(viewYear, viewMonth)
-    const totalDays  = daysInMonth(viewYear, viewMonth)
-    const prevDays   = daysInMonth(viewYear, viewMonth === 0 ? 11 : viewMonth - 1)
+    const firstDay  = firstDayOfMonth(viewYear, viewMonth)
+    const totalDays = daysInMonth(viewYear, viewMonth)
+    const prevDays  = daysInMonth(viewYear, viewMonth === 0 ? 11 : viewMonth - 1)
     const totalCells = Math.ceil((firstDay + totalDays) / 7) * 7
     const cells = Array.from({ length: totalCells }, (_, i) => {
       if (i < firstDay) {
@@ -787,6 +838,7 @@ export default function SchedulePage() {
     })
     for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7))
   } else if (viewMode === 'week') {
+    // Week starts Monday
     const ws = getWeekStart(viewYear, viewMonth, viewDay)
     rows = [Array.from({ length: 7 }, (_, i) => {
       const d = new Date(ws); d.setDate(d.getDate() + i)
@@ -811,22 +863,52 @@ export default function SchedulePage() {
   const handleDragLeave  = () => setDragOverDay(null)
   const handleDragEnd    = () => { draggingJob.current = null; setDragOverDay(null) }
 
-  // Month/day cell drop — opens start-time picker (no prefill)
   const handleDrop = (e, cell) => {
     e.preventDefault()
     setDragOverDay(null)
     const job = draggingJob.current
     draggingJob.current = null
     if (!job) return
+    // Month/day view: show start-time picker
     setPendingDrop({ job, date: { year: cell.year, month: cell.month, day: cell.day } })
   }
 
-  // Week grid drop — opens start-time picker with time pre-filled from Y position
-  const handleWeekDrop = (day, prefillTime) => {
+  // ── Week drop — immediate save, no popup ───────────────────────────────────
+  const handleWeekDrop = async (day, snappedTime) => {
     const job = draggingJob.current
     draggingJob.current = null
     if (!job) return
-    setPendingDrop({ job, date: { year: day.year, month: day.month, day: day.day }, prefillTime })
+
+    const isoString = toISO(day.year, day.month, day.day, snappedTime)
+
+    // Optimistic update
+    setJobs(prev => prev.map(j =>
+      j.id === job.id
+        ? { ...j, scheduledDate: { year: day.year, month: day.month, day: day.day }, scheduledTime: snappedTime, _isScheduled: true }
+        : j
+    ))
+
+    const { ok } = await apiFetch(`jobs/${job.id}/schedule/`, {
+      method: 'PATCH',
+      body: JSON.stringify({ scheduled_datetime: isoString }),
+    })
+    if (!ok) setJobs(prev => prev.map(j => j.id === job.id ? job : j))
+  }
+
+  // ── Week resize — immediate save, no popup ────────────────────────────────
+  const handleWeekResizeSave = async (job, endTime) => {
+    if (!job.scheduledDate) return
+    const isoStart = toISO(job.scheduledDate.year, job.scheduledDate.month, job.scheduledDate.day, job.scheduledTime)
+    const isoEnd   = toISO(job.scheduledDate.year, job.scheduledDate.month, job.scheduledDate.day, endTime)
+
+    // Optimistic update
+    setJobs(prev => prev.map(j => j.id === job.id ? { ...j, endTime } : j))
+
+    const { ok } = await apiFetch(`jobs/${job.id}/schedule/`, {
+      method: 'PATCH',
+      body: JSON.stringify({ scheduled_datetime: isoStart, end_time: isoEnd }),
+    })
+    if (!ok) setJobs(prev => prev.map(j => j.id === job.id ? job : j))
   }
 
   // ── Panel drag handlers (unschedule) ───────────────────────────────────────
@@ -849,7 +931,7 @@ export default function SchedulePage() {
     if (!ok) setJobs(prev => prev.map(j => j.id === job.id ? job : j))
   }
 
-  // ── Confirm start-time (drag-drop) ─────────────────────────────────────────
+  // ── Confirm start-time (month / day drop only) ─────────────────────────────
   const confirmSchedule = async (time) => {
     const { job, date } = pendingDrop
     const isoString     = toISO(date.year, date.month, date.day, time)
@@ -868,33 +950,14 @@ export default function SchedulePage() {
     setModalSaving(false)
   }
 
-  // ── Confirm end-time (week view resize) ────────────────────────────────────
-  const confirmEndTime = async (endTime) => {
-    const { job } = pendingResize
-    const isoStart = toISO(job.scheduledDate.year, job.scheduledDate.month, job.scheduledDate.day, job.scheduledTime)
-    const isoEnd   = toISO(job.scheduledDate.year, job.scheduledDate.month, job.scheduledDate.day, endTime)
-
-    setResizeSaving(true)
-    const { ok } = await apiFetch(`jobs/${job.id}/schedule/`, {
-      method: 'PATCH',
-      body: JSON.stringify({ scheduled_datetime: isoStart, end_time: isoEnd }),
-    })
-    if (ok) {
-      setJobs(prev => prev.map(j => j.id === job.id ? { ...j, endTime } : j))
-      setPendingResize(null)
-    }
-    setResizeSaving(false)
-  }
-
   const handleChipClick = (job) => navigate(`/admin/jobs/${job.id}`)
 
-  // ── Show unscheduled panel for month + week views ──────────────────────────
   const showPanel = viewMode === 'month' || viewMode === 'week'
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <>
-      {/* Start-time modal */}
+      {/* Start-time modal (month / day only) */}
       {pendingDrop && (
         <TimePickerModal
           job={pendingDrop.job}
@@ -906,20 +969,9 @@ export default function SchedulePage() {
         />
       )}
 
-      {/* End-time modal (week resize) */}
-      {pendingResize && (
-        <EndTimeModal
-          job={pendingResize.job}
-          prefillTime={pendingResize.prefillTime}
-          saving={resizeSaving}
-          onConfirm={confirmEndTime}
-          onCancel={() => { if (!resizeSaving) setPendingResize(null) }}
-        />
-      )}
-
       <div className="flex gap-0 h-full min-h-0">
 
-        {/* ── LEFT: Unscheduled panel (month + week) ── */}
+        {/* ── LEFT: Unscheduled panel ── */}
         {showPanel && (
           <div
             className={[
@@ -939,12 +991,9 @@ export default function SchedulePage() {
                 </span>
               </div>
               <p className="text-[#90a1b9] text-[11px] mt-1 leading-[16px]">
-                {dragOverPanel
-                  ? 'Release to unschedule'
-                  : 'Drag onto calendar to schedule · drag here to unschedule'}
+                {dragOverPanel ? 'Release to unschedule' : 'Drag onto calendar · drag here to unschedule'}
               </p>
             </div>
-
             <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
               {loading ? (
                 <div className="flex justify-center py-8">
@@ -976,33 +1025,29 @@ export default function SchedulePage() {
               <h1 className="text-[#0f172b] font-bold text-[26px] leading-[34px]">Schedule</h1>
               <p className="text-[#62748e] text-[14px] mt-0.5">
                 {viewMode === 'week'
-                  ? 'Drag to reschedule · drag bottom handle to set end time'
+                  ? 'Drop to schedule · drag bottom edge to set end time · snaps to 15 min'
                   : 'Drag and drop to reschedule jobs'}
               </p>
             </div>
 
             <div className="flex items-center gap-3 shrink-0">
-              {/* View toggle */}
               <div className="flex items-center bg-white border border-[#e2e8f0] rounded-[10px] p-[3px]">
                 {['month','week','day'].map(mode => (
                   <button key={mode} onClick={() => setViewMode(mode)}
                     className={`px-4 py-[6px] rounded-[7px] text-[13px] font-semibold capitalize transition-all ${
-                      viewMode === mode
-                        ? 'bg-[#0f172b] text-white shadow-sm'
-                        : 'text-[#62748e] hover:text-[#314158]'
+                      viewMode === mode ? 'bg-[#0f172b] text-white shadow-sm' : 'text-[#62748e] hover:text-[#314158]'
                     }`}>
                     {mode.charAt(0).toUpperCase() + mode.slice(1)}
                   </button>
                 ))}
               </div>
 
-              {/* Navigation */}
               <div className="flex items-center gap-1 bg-white border border-[#e2e8f0] rounded-[10px] px-2 py-[5px]">
                 <button onClick={prevView}
                   className="w-7 h-7 flex items-center justify-center rounded-[6px] text-[#314158] hover:bg-[#f8fafc] transition-colors">
                   <IconChevLeft />
                 </button>
-                <span className="text-[#0f172b] font-bold text-[14px] w-[160px] text-center select-none">
+                <span className="text-[#0f172b] font-bold text-[14px] w-[168px] text-center select-none">
                   {getViewLabel()}
                 </span>
                 <button onClick={nextView}
@@ -1025,7 +1070,6 @@ export default function SchedulePage() {
               </div>
 
             ) : viewMode === 'week' ? (
-              // ── Week view: time grid ──────────────────────────────────────
               <WeekView
                 days={weekDays}
                 jobs={jobs}
@@ -1034,13 +1078,12 @@ export default function SchedulePage() {
                 onDragStart={handleDragStart}
                 onJobClick={handleChipClick}
                 onWeekDrop={handleWeekDrop}
-                onResizeEnd={(job, prefillTime) => setPendingResize({ job, prefillTime })}
+                onWeekResizeSave={handleWeekResizeSave}
               />
 
             ) : (
-              // ── Month / Day view: classic grid ────────────────────────────
               <>
-                {/* Day headers */}
+                {/* Month / Day — day headers */}
                 <div className={`grid border-b border-[#e2e8f0] ${viewMode === 'day' ? 'grid-cols-1' : 'grid-cols-7'}`}>
                   {rows[0]?.map(cell => (
                     <div key={`h-${cell.day}-${cell.month}`}
@@ -1056,8 +1099,8 @@ export default function SchedulePage() {
                       className={`grid divide-x divide-[#f1f5f9] ${viewMode === 'day' ? 'grid-cols-1' : 'grid-cols-7'}`}
                       style={{ minHeight: viewMode === 'day' ? '500px' : '120px' }}>
                       {row.map((cell, ci) => {
-                        const dayJobs = scheduledOnDay(cell.year, cell.month, cell.day)
-                        const isOver  = dragOverDay?.year === cell.year && dragOverDay?.month === cell.month && dragOverDay?.day === cell.day
+                        const dayJobs  = scheduledOnDay(cell.year, cell.month, cell.day)
+                        const isOver   = dragOverDay?.year === cell.year && dragOverDay?.month === cell.month && dragOverDay?.day === cell.day
                         const todayDay = isToday(cell.year, cell.month, cell.day)
                         return (
                           <div key={ci}
@@ -1127,7 +1170,7 @@ export default function SchedulePage() {
             )}
           </div>
 
-          {/* Legend */}
+          {/* Status legend */}
           <div className="flex items-center gap-5 flex-wrap shrink-0">
             {Object.entries(STATUS_CHIP).map(([label, c]) => (
               <div key={label} className="flex items-center gap-1.5">
