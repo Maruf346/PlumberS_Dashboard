@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useRef }      from 'react'
 import { useParams, useNavigate, Link }     from 'react-router-dom'
+import { HexColorPicker }                  from 'react-colorful'
 
 import PersonAvatar      from '@/components/shared/PersonAvatar'
 import PeopleStatusBadge from '@/components/shared/PeopleStatusBadge'
@@ -35,6 +36,7 @@ function IconEdit()       { return <svg width="14" height="14" viewBox="0 0 14 1
 function IconUnlink()     { return <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 9l4-4M3.5 7.5L2 9a2.828 2.828 0 004 4l1.5-1.5M10.5 6.5L12 5a2.828 2.828 0 00-4-4L6.5 2.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M2 2l10 10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg> }
 function IconChevDown()   { return <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg> }
 function IconSearch()     { return <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="#90a1b9" strokeWidth="1.1"/><path d="M9 9l3 3" stroke="#90a1b9" strokeWidth="1.1" strokeLinecap="round"/></svg> }
+function IconPalette()    { return <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="#62748e" strokeWidth="1.1"/><circle cx="5" cy="5.5" r="1" fill="#62748e"/><circle cx="9.5" cy="4.5" r="1" fill="#62748e"/><circle cx="11" cy="8.5" r="1" fill="#62748e"/><circle cx="4" cy="9" r="1" fill="#62748e"/><path d="M7.5 11.5a1.5 1.5 0 000-3h-1a1.5 1.5 0 000 3h1z" fill="#62748e"/></svg> }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const AVATAR_COLORS = ['#3b82f6','#8b5cf6','#f59e0b','#10b981','#ef4444','#06b6d4','#f54900']
@@ -160,6 +162,226 @@ function Spinner() {
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="w-8 h-8 rounded-full border-2 border-[#e2e8f0] border-t-[#f54900] animate-spin"/>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ── Staff Color Card ──────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+const COLOR_PRESETS = [
+  '#f54900','#3b82f6','#8b5cf6','#10b981','#ef4444',
+  '#f59e0b','#06b6d4','#ec4899','#64748b','#0f172b',
+]
+const HEX_RE = /^#[0-9a-fA-F]{6}$/
+
+function StaffColorCard({ staffId }) {
+  const [colorData,  setColorData]  = useState(undefined) // undefined=loading, null=not set
+  const [loading,    setLoading]    = useState(true)
+  const [editing,    setEditing]    = useState(false)
+  const [picked,     setPicked]     = useState('#f54900')
+  const [hexInput,   setHexInput]   = useState('#f54900')
+  const [saving,     setSaving]     = useState(false)
+  const [error,      setError]      = useState('')
+
+  useEffect(() => {
+    setLoading(true)
+    apiFetch(`user/admin/users/${staffId}/color/`).then(({ data, ok }) => {
+      if (ok && data?.color) {
+        setColorData(data)
+        setPicked(data.color)
+        setHexInput(data.color)
+      } else {
+        setColorData(null)
+      }
+      setLoading(false)
+    })
+  }, [staffId])
+
+  const openEdit = () => {
+    const c = colorData?.color ?? '#f54900'
+    setPicked(c); setHexInput(c); setError(''); setEditing(true)
+  }
+
+  const handlePickerChange = (val) => { setPicked(val); setHexInput(val) }
+
+  const handleHexInput = (val) => {
+    setHexInput(val)
+    if (HEX_RE.test(val)) setPicked(val)
+  }
+
+  const handleSave = async () => {
+    if (!HEX_RE.test(picked)) { setError('Please enter a valid 6-digit hex color.'); return }
+    setSaving(true); setError('')
+    const method = colorData ? 'PATCH' : 'POST'
+    const { data, ok } = await apiFetch(`user/admin/users/${staffId}/color/`, {
+      method,
+      body: JSON.stringify({ color: picked }),
+    })
+    if (ok && data) { setColorData(data); setEditing(false) }
+    else setError('Failed to save color. Please try again.')
+    setSaving(false)
+  }
+
+  const isValid    = HEX_RE.test(picked)
+  const hasChanged = picked !== colorData?.color
+
+  return (
+    <div className="bg-white border border-[#e2e8f0] rounded-[14px] overflow-hidden shadow-[0px_1px_3px_rgba(0,0,0,0.08)]">
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-[#f1f5f9]">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-[6px] bg-[#f8fafc] border border-[#e2e8f0] flex items-center justify-center">
+            <IconPalette />
+          </div>
+          <div>
+            <h3 className="text-[#1d293d] font-bold text-[15px] leading-[22px]">Staff Color</h3>
+            <p className="text-[#90a1b9] text-[12px]">
+              {loading ? 'Loading…' : colorData?.color
+                ? <span className="font-['Consolas',monospace] uppercase tracking-wider">{colorData.color}</span>
+                : 'No color assigned'}
+            </p>
+          </div>
+        </div>
+        {!loading && (
+          <div className="flex items-center gap-3">
+            {colorData?.color && !editing && (
+              <div className="w-7 h-7 rounded-full border-2 border-white ring-1 ring-[#e2e8f0] shrink-0 shadow-sm"
+                style={{ backgroundColor: colorData.color }} />
+            )}
+            {!editing && (
+              <button onClick={openEdit}
+                className="flex items-center gap-1.5 px-3 py-[6px] rounded-[8px] border border-[#e2e8f0] bg-white hover:bg-[#f8fafc] text-[#314158] text-[12px] font-medium transition-colors">
+                <IconEdit /> {colorData ? 'Change' : 'Assign Color'}
+              </button>
+            )}
+            {editing && (
+              <button onClick={() => setEditing(false)}
+                className="flex items-center justify-center w-7 h-7 rounded-[6px] border border-[#e2e8f0] bg-white hover:bg-[#f8fafc] text-[#90a1b9] transition-colors">
+                <IconClose />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Color display when assigned and not editing */}
+      {!loading && colorData?.color && !editing && (
+        <div className="px-6 py-5">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-[12px] border border-[#e2e8f0] shadow-sm shrink-0"
+              style={{ backgroundColor: colorData.color }} />
+            <div>
+              <p className="text-[#0f172b] font-bold text-[20px] font-['Consolas',monospace] uppercase tracking-wide">
+                {colorData.color}
+              </p>
+              <p className="text-[#90a1b9] text-[12px] mt-0.5">Assigned color code</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && !colorData && !editing && (
+        <div className="px-6 py-8 flex flex-col items-center gap-3 text-center">
+          <div className="w-12 h-12 rounded-full bg-[#f8fafc] border border-[#e2e8f0] flex items-center justify-center">
+            <IconPalette />
+          </div>
+          <div>
+            <p className="text-[#314158] font-semibold text-[14px]">No color assigned</p>
+            <p className="text-[#90a1b9] text-[13px] mt-0.5">Click "Assign Color" to pick one</p>
+          </div>
+        </div>
+      )}
+
+      {/* Loading skeleton */}
+      {loading && (
+        <div className="px-6 py-5 flex gap-4 items-center">
+          <div className="w-14 h-14 rounded-[12px] bg-[#f1f5f9] animate-pulse shrink-0" />
+          <div className="flex flex-col gap-2">
+            <div className="h-4 bg-[#f1f5f9] rounded animate-pulse w-24" />
+            <div className="h-3 bg-[#f1f5f9] rounded animate-pulse w-16" />
+          </div>
+        </div>
+      )}
+
+      {/* Color picker panel */}
+      {editing && (
+        <div className="px-6 py-5 border-t border-[#f1f5f9]">
+          <div className="flex flex-col sm:flex-row gap-5 items-start">
+
+            {/* HexColorPicker — override its default styles to match the card */}
+            <div className="w-full sm:w-[220px] shrink-0
+              [&_.react-colorful]:w-full
+              [&_.react-colorful__saturation]:rounded-t-[10px]
+              [&_.react-colorful__last-control]:rounded-b-[10px]
+              [&_.react-colorful__saturation-pointer]:shadow-[0_1px_4px_rgba(0,0,0,0.3)]
+              [&_.react-colorful__hue-pointer]:shadow-[0_1px_4px_rgba(0,0,0,0.3)]">
+              <HexColorPicker color={picked} onChange={handlePickerChange} />
+            </div>
+
+            <div className="flex-1 flex flex-col gap-4 w-full">
+
+              {/* Live preview + hex input */}
+              <div>
+                <p className="text-[11px] font-bold text-[#90a1b9] uppercase tracking-[0.5px] mb-2">Color Preview</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-[10px] border border-[#e2e8f0] shadow-sm shrink-0 transition-colors"
+                    style={{ backgroundColor: isValid ? picked : '#f1f5f9' }} />
+                  <div className="flex-1">
+                    <p className="text-[11px] font-bold text-[#90a1b9] uppercase tracking-[0.5px] mb-1.5">Hex Code</p>
+                    <div className="flex items-center gap-2 h-[34px] border border-[#e2e8f0] rounded-[8px] px-3 focus-within:ring-2 focus-within:ring-[#f54900]/20 focus-within:border-[#f54900]/40 transition-colors bg-white">
+                      <div className="w-3 h-3 rounded-full border border-[#e2e8f0] shrink-0"
+                        style={{ backgroundColor: isValid ? picked : '#f1f5f9' }} />
+                      <input
+                        type="text" value={hexInput} maxLength={7}
+                        onChange={e => handleHexInput(e.target.value)}
+                        spellCheck={false}
+                        className="flex-1 bg-transparent font-['Consolas',monospace] text-[13px] text-[#0f172b] uppercase tracking-widest focus:outline-none"
+                        placeholder="#000000"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Preset swatches */}
+              <div>
+                <p className="text-[11px] font-bold text-[#90a1b9] uppercase tracking-[0.5px] mb-2">Quick Presets</p>
+                <div className="flex flex-wrap gap-2">
+                  {COLOR_PRESETS.map(c => (
+                    <button key={c} type="button" title={c}
+                      onClick={() => { setPicked(c); setHexInput(c) }}
+                      className={`w-7 h-7 rounded-full transition-transform hover:scale-110 ${
+                        picked === c
+                          ? 'ring-2 ring-offset-2 ring-[#0f172b]'
+                          : 'ring-1 ring-black/10'
+                      }`}
+                      style={{ backgroundColor: c }} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {error && <p className="text-[#c10007] text-[12px] mt-3">{error}</p>}
+
+          {/* Save / Cancel */}
+          <div className="flex items-center justify-end gap-2 pt-4 mt-1 border-t border-[#f1f5f9]">
+            <button onClick={() => setEditing(false)} disabled={saving}
+              className="px-4 py-[7px] rounded-[8px] border border-[#e2e8f0] text-[#314158] text-[13px] font-medium hover:bg-[#f8fafc] transition-colors disabled:opacity-40">
+              Cancel
+            </button>
+            <button onClick={handleSave} disabled={saving || !hasChanged || !isValid}
+              className="flex items-center gap-1.5 px-4 py-[7px] rounded-[8px] bg-[#f54900] hover:bg-[#c73b00] text-white text-[13px] font-semibold transition-colors disabled:opacity-40">
+              {saving
+                ? <><div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />Saving…</>
+                : 'Save Color'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -625,7 +847,10 @@ export default function StaffProfilePage() {
           </div>
         </div>
 
-        {/* ── Vehicle Assignment Card — NEW ── */}
+        {/* ── Staff Color Card ── */}
+        <StaffColorCard staffId={staffId} />
+
+        {/* ── Vehicle Assignment Card ── */}
         <VehicleAssignCard staffId={staffId} />
 
         {/* Employee Profile Details */}
