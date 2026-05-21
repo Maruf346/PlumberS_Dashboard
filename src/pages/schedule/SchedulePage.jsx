@@ -887,7 +887,7 @@ function NewScheduleModal({ date, startTime, onClose, onSaved }) {
 
     const { ok: assignOk } = await apiFetch(`jobs/${selectedJob.id}/update/`, {
       method: 'PATCH',
-      body:   JSON.stringify({ assigned_to: selectedStaff.id }),
+      body:   JSON.stringify({ assigned_to_id: selectedStaff.id }),
     })
     if (!assignOk) { setError('Schedule saved but staff assignment failed.'); setSaving(false); return }
 
