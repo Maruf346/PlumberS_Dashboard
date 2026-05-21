@@ -100,6 +100,7 @@ function mapJob(j) {
     rawStatus:      j.status,
     employeeName:   j.assigned_to?.full_name ?? 'Unassigned',
     employeeId:     j.assigned_to?.id ?? null,
+    employeeColor:  j.assigned_to?.color ?? null,
     insuredAddress: j.insured_address ?? '—',
     scheduledDate:  parsed ? { year: parsed.year, month: parsed.month, day: parsed.day } : null,
     scheduledTime:  parsed?.time ?? '09:00',
@@ -154,6 +155,18 @@ function getEmployeeColor(employeeId) {
   if (!employeeId) return { bg: 'bg-[#f3f4f6]', border: 'border-[#d1d5db]' }
   const hash = String(employeeId).split('').reduce((a, c) => a + c.charCodeAt(0), 0)
   return EMPLOYEE_COLORS[hash % EMPLOYEE_COLORS.length]
+}
+
+// Convert a hex staff color into inline card styles (bg tint + border)
+function hexToCardStyle(hex) {
+  if (!hex || !/^#[0-9a-fA-F]{6}$/i.test(hex)) return null
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return {
+    backgroundColor: `rgba(${r}, ${g}, ${b}, 0.13)`,
+    borderColor:     `rgba(${r}, ${g}, ${b}, 0.65)`,
+  }
 }
 
 const PRIORITY_COLOR = {
@@ -217,14 +230,30 @@ function TimePickerModal({ job, date, prefillTime, saving, onConfirm, onCancel }
 // ── Smart hover detail popup (month / day / week views) ───────────────────────
 function JobDetailPopup({ job, position }) {
   if (!position) return null
-  // Flip below the card if too close to top of viewport
-  const showAbove  = position.top > 260
-  const transform  = showAbove ? 'translate(-50%, calc(-100% - 8px))' : 'translate(-50%, 8px)'
-  // Clamp horizontally so popup never goes off-screen
-  const safeLeft   = Math.max(148, Math.min(position.left, window.innerWidth - 148))
+
+  const POPUP_W = 280
+  let popupStyle
+
+  if (position.mode === 'week') {
+    // Week view: float to the right of the card, fall back to left when near screen edge
+    const spaceRight = window.innerWidth - (position.right ?? 0) - 12
+    const rawLeft    = spaceRight >= POPUP_W
+      ? (position.right ?? 0) + 8
+      : (position.left  ?? 0) - POPUP_W - 8
+    const safeLeft = Math.max(8, Math.min(rawLeft, window.innerWidth - POPUP_W - 8))
+    const top      = Math.max(8, Math.min(position.top ?? 0, window.innerHeight - 320))
+    popupStyle = { top, left: safeLeft, transform: 'none' }
+  } else {
+    // Month / day view: flip above when card is in the lower half of the viewport
+    const showAbove = (position.top ?? 0) > window.innerHeight / 2
+    const transform = showAbove ? 'translate(-50%, calc(-100% - 8px))' : 'translate(-50%, 8px)'
+    const safeLeft  = Math.max(148, Math.min(position.left ?? 0, window.innerWidth - 148))
+    popupStyle = { top: position.top, left: safeLeft, transform }
+  }
+
   return (
     <div className="fixed z-[60] bg-white rounded-[12px] shadow-[0_10px_40px_rgba(15,23,43,0.3)] border border-[#e2e8f0] p-4 w-[280px]"
-      style={{ top: position.top, left: safeLeft, transform, pointerEvents: 'none' }}>
+      style={{ ...popupStyle, pointerEvents: 'none' }}>
       <div className="flex items-start gap-2 mb-3">
         <div>
           <span className="inline-block text-[11px] font-bold px-2 py-1 rounded-full bg-[#f8fafc] border border-[#e2e8f0] text-[#314158]">{job.job_id}</span>
@@ -259,15 +288,17 @@ function JobDetailPopup({ job, position }) {
 
 // ── Month/Day job chip ─────────────────────────────────────────────────────────
 function JobChip({ job, onDragStart, onClick }) {
-  const statusConfig  = STATUS_CHIP[job.status] ?? DEFAULT_CHIP
-  const employeeColor = getEmployeeColor(job.employeeId)
+  const statusConfig = STATUS_CHIP[job.status] ?? DEFAULT_CHIP
+  const colorStyle   = hexToCardStyle(job.employeeColor)
+  const empFallback  = colorStyle ? null : getEmployeeColor(job.employeeId)
   const [popupPosition, setPopupPosition] = useState(null)
   const chipRef = useRef(null)
 
   const handleMouseEnter = () => {
     if (chipRef.current) {
+      // Use pure viewport coords — popup is position:fixed, no scrollY offset needed
       const rect = chipRef.current.getBoundingClientRect()
-      setPopupPosition({ top: rect.top + window.scrollY, left: rect.left + rect.width / 2 + window.scrollX })
+      setPopupPosition({ top: rect.top, left: rect.left + rect.width / 2 })
     }
   }
 
@@ -278,7 +309,8 @@ function JobChip({ job, onDragStart, onClick }) {
         onClick={e => { e.stopPropagation(); onClick(job) }}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={() => setPopupPosition(null)}
-        className={`flex flex-col gap-1.5 p-2 rounded-[12px] border cursor-grab active:cursor-grabbing hover:brightness-95 transition-all select-none min-h-fit ${employeeColor.bg} ${employeeColor.border}`}>
+        style={colorStyle ?? {}}
+        className={`flex flex-col gap-1.5 p-2 rounded-[12px] border cursor-grab active:cursor-grabbing hover:brightness-95 transition-all select-none min-h-fit ${colorStyle ? '' : `${empFallback.bg} ${empFallback.border}`}`}>
         <div className="flex items-center gap-1 flex-wrap">
           <span className={`inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${statusConfig.border} ${statusConfig.bg} ${statusConfig.text}`}>
             {job.job_id}
@@ -319,11 +351,14 @@ function UnscheduledRow({ job, onDragStart }) {
 function computeLayout(dayJobs) {
   if (!dayJobs.length) return []
   const enriched = dayJobs
-    .map(j => ({
-      job:      j,
-      startMin: minutesFromTime(j.scheduledTime),
-      endMin:   j.endTime ? minutesFromTime(j.endTime) : minutesFromTime(j.scheduledTime) + 60,
-    }))
+    .map(j => {
+      const startMin = minutesFromTime(j.scheduledTime)
+      // Enforce minimum 15-min span so a job always overlaps with itself,
+      // preventing totalCols from collapsing to -Infinity / NaN.
+      const rawEnd = j.endTime ? minutesFromTime(j.endTime) : startMin + 60
+      const endMin = Math.max(startMin + 15, rawEnd)
+      return { job: j, startMin, endMin }
+    })
     .sort((a, b) => a.startMin - b.startMin || b.endMin - a.endMin)
 
   const laneEnds = []
@@ -336,7 +371,8 @@ function computeLayout(dayJobs) {
 
   return placed.map(p => {
     const overlapping = placed.filter(q => q.startMin < p.endMin && q.endMin > p.startMin)
-    const totalCols   = Math.max(...overlapping.map(q => q.lane)) + 1
+    // Guard: overlapping always includes p itself now, but be safe
+    const totalCols = overlapping.length > 0 ? Math.max(...overlapping.map(q => q.lane)) + 1 : 1
     return { job: p.job, lane: p.lane, totalCols }
   })
 }
@@ -346,8 +382,9 @@ function WeekJobCard({
   job, top, height, lane, totalCols, isClippedTop, isClippedBottom,
   scrollRef, onDragStart, onClick, onResizeSave,
 }) {
-  const employeeColor = getEmployeeColor(job.employeeId)
-  const statusConfig  = STATUS_CHIP[job.status] ?? DEFAULT_CHIP
+  const colorStyle   = hexToCardStyle(job.employeeColor)
+  const empFallback  = colorStyle ? null : getEmployeeColor(job.employeeId)
+  const statusConfig = STATUS_CHIP[job.status] ?? DEFAULT_CHIP
   const [liveHeight,  setLiveHeight]  = useState(height)
   const [isResizing,  setIsResizing]  = useState(false)
   const [popupPos,    setPopupPos]    = useState(null)
@@ -396,7 +433,8 @@ function WeekJobCard({
   const handleMouseEnter = () => {
     if (cardRef.current) {
       const rect = cardRef.current.getBoundingClientRect()
-      setPopupPos({ top: rect.top + window.scrollY, left: rect.left + rect.width / 2 + window.scrollX })
+      // Pass raw viewport coords + mode so JobDetailPopup floats beside the card
+      setPopupPos({ top: rect.top, left: rect.left, right: rect.right, mode: 'week' })
     }
   }
 
@@ -426,12 +464,13 @@ function WeekJobCard({
           width:  `calc(${widthPct}% - ${lane === 0 || lane === totalCols - 1 ? GAP * 1.5 : GAP}px)`,
           height: liveHeight,
           zIndex: isResizing ? 30 : lane + 2,
+          ...(colorStyle ?? {}),
         }}
         className={[
           'border flex flex-col overflow-hidden select-none transition-shadow',
           isClippedTop    ? 'rounded-t-none'    : 'rounded-t-[8px]',
           isClippedBottom ? 'rounded-b-none'    : 'rounded-b-[8px]',
-          employeeColor.bg, employeeColor.border,
+          colorStyle ? '' : `${empFallback.bg} ${empFallback.border}`,
           isResizing
             ? 'cursor-ns-resize shadow-[0_4px_20px_rgba(15,23,43,0.2)]'
             : 'cursor-pointer hover:brightness-95 hover:shadow-[0_2px_8px_rgba(15,23,43,0.12)]',
