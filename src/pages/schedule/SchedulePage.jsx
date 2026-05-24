@@ -275,12 +275,18 @@ function NoteDetailPopup({ note, position }) {
             <span className="font-semibold text-[#0f172b]">{note.job.job_id}</span>
           </div>
         )}
-        {firstStaff && (
-          <div className="flex items-center justify-between">
-            <span className="text-[#62748e]">Staff:</span>
-            <span className="font-semibold text-[#0f172b]">{firstStaff.full_name}</span>
+        {note.job?.address && (
+          <div className="flex items-start gap-3">
+            <span className="text-[#62748e] shrink-0">Address:</span>
+            <span className="font-semibold text-[#0f172b] text-right leading-[15px]">{note.job.address}</span>
           </div>
         )}
+        <div className="flex items-center justify-between">
+          <span className="text-[#62748e]">Staff:</span>
+          <span className={`font-semibold ${firstStaff ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
+            {firstStaff ? firstStaff.full_name : 'Unassigned'}
+          </span>
+        </div>
         <div className="flex items-center justify-between">
           <span className="text-[#62748e]">Time:</span>
           <span className="font-semibold text-[#0f172b]">
@@ -304,7 +310,7 @@ function NoteDetailPopup({ note, position }) {
 }
 
 // ── Month/Day note chip ────────────────────────────────────────────────────────
-function NoteChip({ note, onDragStart, onClick, onDoubleClick }) {
+function NoteChip({ note, onDragStart, onClick, onContextMenu }) {
   const firstStaff  = note.staff?.[0]
   const colorStyle  = hexToCardStyle(firstStaff?.color ?? null)
   const fallback    = colorStyle ? null : getEmployeeColor(firstStaff?.id ?? null)
@@ -324,7 +330,7 @@ function NoteChip({ note, onDragStart, onClick, onDoubleClick }) {
       <div ref={chipRef} draggable
         onDragStart={e => { e.stopPropagation(); onDragStart(e, note) }}
         onClick={e => { e.stopPropagation(); onClick(note) }}
-        onDoubleClick={e => { e.stopPropagation(); onDoubleClick(note) }}
+        onContextMenu={e => { e.preventDefault(); e.stopPropagation(); onContextMenu?.(e, note) }}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={() => setPopupPos(null)}
         style={colorStyle ?? {}}
@@ -335,13 +341,16 @@ function NoteChip({ note, onDragStart, onClick, onDoubleClick }) {
               {note.job.job_id}
             </span>
           )}
-          {firstStaff && (
-            <span className="text-[9px] font-bold text-[#0f172b] line-clamp-1">{firstStaff.full_name}</span>
-          )}
+          <span className={`text-[9px] font-bold line-clamp-1 ${firstStaff ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
+            {firstStaff ? firstStaff.full_name : 'Unassigned'}
+          </span>
         </div>
         <p className="text-[11px] font-bold text-[#0f172b] leading-[14px] break-words line-clamp-2">
           {note.title || note.description || '—'}
         </p>
+        {note.job?.address && (
+          <p className="text-[9px] text-[#62748e] leading-[12px] line-clamp-1">{note.job.address}</p>
+        )}
         <div className="flex items-center gap-0.5 text-[9px] font-semibold text-[#0f172b]">
           <IconClock /> {note.scheduledTime}
         </div>
@@ -384,7 +393,7 @@ function computeLayout(dayJobs) {
 // ── Week view: individual job card ────────────────────────────────────────────
 function WeekNoteCard({
   note, top, height, lane, totalCols, isClippedTop, isClippedBottom,
-  scrollRef, onDragStart, onClick, onDoubleClick, onResizeSave,
+  scrollRef, onDragStart, onClick, onContextMenu, onResizeSave,
 }) {
   const firstStaff   = note.staff?.[0]
   const colorStyle   = hexToCardStyle(firstStaff?.color ?? null)
@@ -441,9 +450,10 @@ function WeekNoteCard({
     }
   }
 
-  const showBody   = liveHeight > 28
-  const showTime   = liveHeight > 42
-  const showStaff  = liveHeight > 56
+  const showBody    = liveHeight > 28
+  const showTime    = liveHeight > 42
+  const showStaff   = liveHeight > 56
+  const showAddress = liveHeight > 72
 
   const GAP      = 2
   const colPct   = 100 / totalCols
@@ -457,7 +467,7 @@ function WeekNoteCard({
         draggable={!isResizing}
         onDragStart={e => { if (isResizing) return; e.stopPropagation(); onDragStart(e, note) }}
         onClick={e => { e.stopPropagation(); onClick(note) }}
-        onDoubleClick={e => { e.stopPropagation(); onDoubleClick(note) }}
+        onContextMenu={e => { e.preventDefault(); e.stopPropagation(); onContextMenu?.(e, note) }}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={() => setPopupPos(null)}
         style={{
@@ -489,8 +499,10 @@ function WeekNoteCard({
                 {note.job.job_id}
               </span>
             )}
-            {showStaff && firstStaff && (
-              <span className="text-[9px] font-bold text-[#0f172b] truncate">{firstStaff.full_name}</span>
+            {showStaff && (
+              <span className={`text-[9px] font-bold truncate ${firstStaff ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
+                {firstStaff ? firstStaff.full_name : 'Unassigned'}
+              </span>
             )}
           </div>
 
@@ -498,6 +510,10 @@ function WeekNoteCard({
             <p className="text-[10px] font-bold text-[#0f172b] leading-[13px] mt-0.5 truncate">
               {note.title || note.description || '—'}
             </p>
+          )}
+
+          {showAddress && note.job?.address && (
+            <p className="text-[9px] text-[#62748e] leading-[12px] truncate mt-0.5">{note.job.address}</p>
           )}
 
           {showTime && (
@@ -552,7 +568,7 @@ function CurrentTimeLine() {
 }
 
 // ── Week view: time grid ───────────────────────────────────────────────────────
-function WeekView({ days, notes, today, draggingNoteRef, onDragStart, onNoteClick, onNoteDoubleClick, onWeekDrop, onWeekResizeSave, onDoubleClickSlot }) {
+function WeekView({ days, notes, today, draggingNoteRef, onDragStart, onNoteClick, onNoteContextMenu, onWeekDrop, onWeekResizeSave, onDoubleClickSlot }) {
   const scrollRef = useRef(null)
   const gridRef   = useRef(null)
   const [dragOverCol,  setDragOverCol]  = useState(null)
@@ -705,7 +721,7 @@ function WeekView({ days, notes, today, draggingNoteRef, onDragStart, onNoteClic
                         scrollRef={scrollRef}
                         onDragStart={onDragStart}
                         onClick={onNoteClick}
-                        onDoubleClick={onNoteDoubleClick}
+                        onContextMenu={onNoteContextMenu}
                         onResizeSave={(endTime) => onWeekResizeSave(note, endTime)}
                       />
                     )
@@ -732,10 +748,92 @@ function WeekView({ days, notes, today, draggingNoteRef, onDragStart, onNoteClic
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ── New Schedule Modal ────────────────────────────────────────────────────────
-// Double-click an empty time slot → opens this modal.
-// Handles job search, paginated staff list, start/end time, two PATCH calls.
+// ── Note context menu (right-click on any note card) ─────────────────────────
+function NoteContextMenu({ note, x, y, onClose, onEdit, onViewJob, onDelete }) {
+  const menuRef = useRef(null)
+  const [pos, setPos] = useState({ x, y })
+
+  useEffect(() => {
+    if (menuRef.current) {
+      const rect = menuRef.current.getBoundingClientRect()
+      const nx = x + rect.width  > window.innerWidth  - 8 ? x - rect.width  : x
+      const ny = y + rect.height > window.innerHeight - 8 ? y - rect.height  : y
+      setPos({ x: Math.max(8, nx), y: Math.max(8, ny) })
+    }
+  }, [x, y])
+
+  useEffect(() => {
+    const h = (e) => { if (!menuRef.current?.contains(e.target)) onClose() }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [onClose])
+
+  return (
+    <div ref={menuRef} className="fixed z-[70] bg-white rounded-[10px] shadow-[0_8px_32px_rgba(15,23,43,0.18)] border border-[#e2e8f0] py-1 min-w-[164px]"
+      style={{ left: pos.x, top: pos.y }}>
+      <button onClick={onEdit}
+        className="flex items-center gap-2.5 w-full px-3.5 py-[9px] text-[13px] text-[#0f172b] hover:bg-[#f8fafc] transition-colors text-left">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+          <path d="M9.5 2.5l2 2-7 7H2.5v-2l7-7z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        Edit Note
+      </button>
+      {note.job && (
+        <button onClick={onViewJob}
+          className="flex items-center gap-2.5 w-full px-3.5 py-[9px] text-[13px] text-[#0f172b] hover:bg-[#f8fafc] transition-colors text-left">
+          <IconBriefcase />
+          View Job
+        </button>
+      )}
+      <div className="border-t border-[#f1f5f9] mt-1 pt-1">
+        <button onClick={onDelete}
+          className="flex items-center gap-2.5 w-full px-3.5 py-[9px] text-[13px] text-[#c10007] hover:bg-[#fff1f2] transition-colors text-left">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+            <path d="M2 3.5h10M5.5 3.5V2.5a1 1 0 011-1h1a1 1 0 011 1v1M6 6v4.5M8 6v4.5M3.5 3.5l.5 8.5a.5.5 0 00.5.5h5a.5.5 0 00.5-.5l.5-8.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+          </svg>
+          Delete Note
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Delete confirmation dialog ─────────────────────────────────────────────────
+function DeleteConfirmModal({ note, deleting, onClose, onConfirm }) {
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#0f172b]/50 backdrop-blur-sm p-4"
+      onClick={e => { if (e.target === e.currentTarget && !deleting) onClose() }}>
+      <div className="bg-white rounded-[14px] shadow-[0_16px_60px_rgba(15,23,43,0.24)] w-full max-w-[400px]"
+        onClick={e => e.stopPropagation()}>
+        <div className="p-5 pb-4">
+          <div className="w-10 h-10 rounded-full bg-[#fff1f2] border border-[#fecdd3] flex items-center justify-center mb-3">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M9 6v4M9 12.5v.5" stroke="#c10007" strokeWidth="1.5" strokeLinecap="round"/>
+              <path d="M7.3 2.8a2 2 0 013.4 0l5.4 9.4A2 2 0 0114.4 15H3.6a2 2 0 01-1.7-2.8l5.4-9.4z" stroke="#c10007" strokeWidth="1.3"/>
+            </svg>
+          </div>
+          <h3 className="text-[#0f172b] font-bold text-[16px] mb-1.5">Delete Note</h3>
+          <p className="text-[#62748e] text-[13px] leading-[19px]">
+            <span className="font-semibold text-[#0f172b]">&ldquo;{note.title || note.description || 'This note'}&rdquo;</span> will be permanently removed from the system. This action cannot be undone.
+          </p>
+        </div>
+        <div className="flex gap-2.5 px-5 pb-5">
+          <button onClick={onClose} disabled={deleting}
+            className="flex-1 py-[9px] rounded-[10px] border border-[#e2e8f0] text-[#314158] text-[13px] font-semibold hover:bg-[#f8fafc] transition-colors disabled:opacity-40">
+            Cancel
+          </button>
+          <button onClick={onConfirm} disabled={deleting}
+            className="flex-1 py-[9px] rounded-[10px] bg-[#c10007] hover:bg-[#9b000a] text-white text-[13px] font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+            {deleting
+              ? <><div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin"/>Deleting…</>
+              : 'Delete Note'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Shared modal helpers ──────────────────────────────────────────────────────
 const MODAL_STAFF_COLORS = ['#3b82f6','#8b5cf6','#f59e0b','#10b981','#ef4444','#06b6d4','#f54900','#ec4899']
 function modalStaffColor(id) {
@@ -1331,8 +1429,11 @@ export default function SchedulePage() {
   const [pendingDrop, setPendingDrop] = useState(null)  // { note, date }
   const [modalSaving, setModalSaving] = useState(false)
 
-  // ── Note modal (create = double-click empty slot, edit = double-click card) ─
-  const [noteModal, setNoteModal] = useState(null)  // { mode: 'create'|'edit', note?, date?, startTime? }
+  // ── Note modal (create = double-click empty slot, edit = click card) ─────────
+  const [noteModal,     setNoteModal]     = useState(null)  // { mode: 'create'|'edit', note?, date?, startTime? }
+  const [contextMenu,   setContextMenu]   = useState(null)  // { note, x, y }
+  const [confirmDelete, setConfirmDelete] = useState(null)  // { note }
+  const [deleting,      setDeleting]      = useState(false)
 
   // ── Fetch all notes (API returns flat array, no pagination) ───────────────
   const fetchNotes = useCallback(async (silent = false) => {
@@ -1478,11 +1579,13 @@ export default function SchedulePage() {
     draggingNote.current = null
     if (!note) return
 
-    const isoString     = toISO(day.year, day.month, day.day, snappedTime)
-    const startMin      = minutesFromTime(snappedTime)
-    const defaultEndMin = Math.min(WEEK_END_MIN, snapEndTo15(startMin + 60))
-    const endTimeStr    = timeFromMinutes(defaultEndMin)
-    const isoEnd        = toISO(day.year, day.month, day.day, endTimeStr)
+    const isoString  = toISO(day.year, day.month, day.day, snappedTime)
+    const startMin   = minutesFromTime(snappedTime)
+    const origStart  = minutesFromTime(note.scheduledTime ?? snappedTime)
+    const origEnd    = note.endTime ? minutesFromTime(note.endTime) : origStart + 60
+    const durMin     = Math.max(15, origEnd - origStart)
+    const endTimeStr = timeFromMinutes(startMin + durMin)
+    const isoEnd     = toISO(day.year, day.month, day.day, endTimeStr)
 
     setNotes(prev => prev.map(n =>
       n.id === note.id
@@ -1521,10 +1624,6 @@ export default function SchedulePage() {
     setNoteModal({ mode: 'create', date: day, startTime })
   }, [])
 
-  const handleNoteCardDoubleClick = useCallback((note) => {
-    setNoteModal({ mode: 'edit', note })
-  }, [])
-
   const handleNoteSaved = useCallback(() => {
     setNoteModal(null)
     fetchNotes(true)
@@ -1533,9 +1632,12 @@ export default function SchedulePage() {
   // ── Confirm start-time (month / day drop) ──────────────────────────────────
   const confirmSchedule = async (time) => {
     const { note, date } = pendingDrop
-    const isoStart = toISO(date.year, date.month, date.day, time)
-    const endMins  = Math.min(WEEK_END_MIN, snapEndTo15(minutesFromTime(time) + 60))
-    const isoEnd   = toISO(date.year, date.month, date.day, timeFromMinutes(endMins))
+    const isoStart  = toISO(date.year, date.month, date.day, time)
+    const origStart = minutesFromTime(note.scheduledTime ?? time)
+    const origEnd   = note.endTime ? minutesFromTime(note.endTime) : origStart + 60
+    const durMin    = Math.max(15, origEnd - origStart)
+    const endMins   = minutesFromTime(time) + durMin
+    const isoEnd    = toISO(date.year, date.month, date.day, timeFromMinutes(endMins))
 
     setModalSaving(true)
     const { ok } = await apiFetch(`notes/${note.id}/`, {
@@ -1544,17 +1646,37 @@ export default function SchedulePage() {
     })
     if (ok) {
       setNotes(prev => prev.map(n =>
-        n.id === note.id ? { ...n, scheduledDate: date, scheduledTime: time, endTime: timeFromMinutes(endMins), _isScheduled: true } : n
+        n.id === note.id
+          ? { ...n, scheduledDate: date, scheduledTime: time, endTime: timeFromMinutes(endMins), _isScheduled: true }
+          : n
       ))
       setPendingDrop(null)
     }
     setModalSaving(false)
   }
 
-  // ── Note card single-click: navigate to job if attached ───────────────────
+  // ── Note card single-click: open edit modal ───────────────────────────────
   const handleNoteCardClick = useCallback((note) => {
-    if (note.job?.id) navigate(`/admin/jobs/${note.job.id}`)
-  }, [navigate])
+    setNoteModal({ mode: 'edit', note })
+  }, [])
+
+  // ── Right-click context menu ───────────────────────────────────────────────
+  const handleNoteCardContextMenu = useCallback((e, note) => {
+    setContextMenu({ note, x: e.clientX, y: e.clientY })
+  }, [])
+
+  // ── Delete note ───────────────────────────────────────────────────────────
+  const handleNoteDelete = useCallback(async () => {
+    if (!confirmDelete) return
+    const { note } = confirmDelete
+    setDeleting(true)
+    const { ok } = await apiFetch(`notes/${note.id}/`, { method: 'DELETE' })
+    if (ok) {
+      setNotes(prev => prev.filter(n => n.id !== note.id))
+      setConfirmDelete(null)
+    }
+    setDeleting(false)
+  }, [confirmDelete])
 
   const showPanel = viewMode === 'month'
 
@@ -1570,6 +1692,29 @@ export default function SchedulePage() {
           startTime={noteModal.startTime}
           onClose={() => setNoteModal(null)}
           onSaved={handleNoteSaved}
+        />
+      )}
+
+      {/* Right-click context menu */}
+      {contextMenu && (
+        <NoteContextMenu
+          note={contextMenu.note}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          onEdit={() => { setNoteModal({ mode: 'edit', note: contextMenu.note }); setContextMenu(null) }}
+          onViewJob={() => { navigate(`/admin/jobs/${contextMenu.note.job.id}`); setContextMenu(null) }}
+          onDelete={() => { setConfirmDelete({ note: contextMenu.note }); setContextMenu(null) }}
+        />
+      )}
+
+      {/* Delete confirmation */}
+      {confirmDelete && (
+        <DeleteConfirmModal
+          note={confirmDelete.note}
+          deleting={deleting}
+          onClose={() => { if (!deleting) setConfirmDelete(null) }}
+          onConfirm={handleNoteDelete}
         />
       )}
 
@@ -1687,7 +1832,7 @@ export default function SchedulePage() {
                 draggingNoteRef={draggingNote}
                 onDragStart={handleDragStart}
                 onNoteClick={handleNoteCardClick}
-                onNoteDoubleClick={handleNoteCardDoubleClick}
+                onNoteContextMenu={handleNoteCardContextMenu}
                 onWeekDrop={handleWeekDrop}
                 onWeekResizeSave={handleWeekResizeSave}
                 onDoubleClickSlot={handleDoubleClickSlot}
@@ -1743,7 +1888,7 @@ export default function SchedulePage() {
                             {viewMode === 'day' ? (
                               <div className="flex flex-col gap-2">
                                 {dayNotes.map(note => (
-                                  <NoteChip key={note.id} note={note} onDragStart={handleDragStart} onClick={handleNoteCardClick} onDoubleClick={handleNoteCardDoubleClick} />
+                                  <NoteChip key={note.id} note={note} onDragStart={handleDragStart} onClick={handleNoteCardClick} onContextMenu={handleNoteCardContextMenu} />
                                 ))}
                                 {dayNotes.length === 0 && (
                                   <div className="flex items-center justify-center h-32 text-[#cad5e2] text-[13px]">No notes scheduled</div>
@@ -1756,7 +1901,7 @@ export default function SchedulePage() {
                                   return (
                                     <div key={group.time} className={`grid gap-1 ${cols}`}>
                                       {group.notes.map(note => (
-                                        <NoteChip key={note.id} note={note} onDragStart={handleDragStart} onClick={handleNoteCardClick} onDoubleClick={handleNoteCardDoubleClick} />
+                                        <NoteChip key={note.id} note={note} onDragStart={handleDragStart} onClick={handleNoteCardClick} onContextMenu={handleNoteCardContextMenu} />
                                       ))}
                                     </div>
                                   )
