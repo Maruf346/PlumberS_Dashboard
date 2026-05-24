@@ -3,7 +3,7 @@
 // Shows all schedule notes + tasks linked to the job
 
 import { useState, useEffect } from 'react'
-import { apiFetch }            from '@/utils/apiFetch'
+import { apiFetch, resolveImageUrl } from '@/utils/apiFetch'
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 function IconCalendar() { return <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="9" rx="1.2" stroke="currentColor" strokeWidth="1.1"/><path d="M4 1v2M8 1v2M1 5h10" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg> }
@@ -38,7 +38,7 @@ function StaffPill({ staff }) {
   return (
     <div className="flex items-center gap-1.5">
       {staff.profile_picture
-        ? <img src={staff.profile_picture} alt={staff.full_name} className="w-6 h-6 rounded-full object-cover border border-[#e2e8f0] shrink-0" />
+        ? <img src={resolveImageUrl(staff.profile_picture)} alt={staff.full_name} className="w-6 h-6 rounded-full object-cover border border-[#e2e8f0] shrink-0" />
         : <div className="w-6 h-6 rounded-full bg-[#e2e8f0] flex items-center justify-center text-[9px] font-bold text-[#45556c] shrink-0">{initials}</div>
       }
       <span className="text-[12px] font-medium text-[#314158]">{staff.full_name}</span>
