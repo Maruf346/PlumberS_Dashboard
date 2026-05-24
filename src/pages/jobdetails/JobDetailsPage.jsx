@@ -16,7 +16,8 @@ import JobTabNav              from '@/components/jobdetails/JobTabNav'
 import LineItemsTab           from '@/components/jobdetails/LineItemsTab'
 import SafetyFormsTab         from '@/components/jobdetails/SafetyFormsTab'
 import ReportsTab             from '@/components/jobdetails/ReportsTab'
-import NotesTab              from '@/components/jobdetails/NotesTab'
+import NotesTab               from '@/components/jobdetails/NotesTab'
+import ScheduleNotesTab       from '@/components/jobdetails/ScheduleNotesTab'
 import DeleteJobModal         from '@/components/editjob/DeleteJobModal'
 import EditJobDrawer          from '@/pages/editjob/EditJobDrawer'
 
@@ -25,7 +26,8 @@ export default function JobDetailsPage() {
   const { jobId }  = useParams()
   const navigate   = useNavigate()
 
-  const [activeTab,  setActiveTab]  = useState('lineitems')
+  const [activeTab,   setActiveTab]   = useState('lineitems')
+  const [notesCount,  setNotesCount]  = useState(0)
   const [job,        setJob]        = useState(null)
   const [loading,    setLoading]    = useState(true)
   const [notFound,   setNotFound]   = useState(false)
@@ -137,12 +139,13 @@ export default function JobDetailsPage() {
           </div>
 
           <div className="bg-white border border-[#e2e8f0] rounded-[14px] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] overflow-hidden">
-            <JobTabNav activeTab={activeTab} onTabChange={setActiveTab} />
+            <JobTabNav activeTab={activeTab} onTabChange={setActiveTab} notesCount={notesCount} />
             <div className="p-6">
-              {activeTab === 'lineitems'   && <LineItemsTab   job={job} onJobUpdate={fetchJob} />}
-              {activeTab === 'safetyforms' && <SafetyFormsTab job={job} />}
-              {activeTab === 'reports'     && <ReportsTab     job={job} />}
-              {activeTab === 'notes'       && <NotesTab       job={job} />}
+              {activeTab === 'lineitems'     && <LineItemsTab      job={job} onJobUpdate={fetchJob} />}
+              {activeTab === 'safetyforms'   && <SafetyFormsTab    job={job} />}
+              {activeTab === 'reports'       && <ReportsTab        job={job} />}
+              {activeTab === 'notes'         && <NotesTab          job={job} />}
+              {activeTab === 'schedulenotes' && <ScheduleNotesTab  job={job} onCountLoad={setNotesCount} />}
             </div>
           </div>
         </div>

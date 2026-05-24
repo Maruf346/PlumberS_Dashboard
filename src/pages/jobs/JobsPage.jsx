@@ -135,7 +135,7 @@ export default function JobsPage() {
     if (status)     params.set('status',      status)
     // if (manager) params.set('assigned_to', manager) // Manager filter disabled — backend mismatch
     // if (dateFilter) params.set('date', dateFilter) // Date filter disabled — backend expects YYYY-MM-DD, not range keywords
-    const { data, ok } = await apiFetch(`jobs/?${params}`)
+    const { data, ok } = await apiFetch(`jobs/unique/?${params}`)
     if (ok && data) {
       setJobs(data.results ?? [])
       setTotalCount(data.count ?? 0)
