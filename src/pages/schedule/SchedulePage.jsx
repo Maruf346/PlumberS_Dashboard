@@ -885,18 +885,22 @@ function modalStaffInitials(name) {
   return p.length >= 2 ? (p[0][0] + p[p.length - 1][0]).toUpperCase() : name.slice(0, 2).toUpperCase()
 }
 
-// ── TaskCreateModal ──────────────────────────────────────────────────────────
-function TaskCreateModal({ jobId, onClose, onCreated }) {
-  const [name,          setName]          = useState('')
-  const [description,   setDescription]   = useState('')
-  const [dueDate,       setDueDate]       = useState('')
-  const [estimatedCost, setEstimatedCost] = useState('')
-  const [selectedStaff, setSelectedStaff] = useState(null)
+// ── TaskCreateModal (handles both create and edit) ───────────────────────────
+function TaskCreateModal({ mode = 'create', task = null, jobId, onClose, onSaved }) {
+  const [name,          setName]          = useState(task?.name          ?? '')
+  const [description,   setDescription]   = useState(task?.description   ?? '')
+  const [dueDate,       setDueDate]       = useState(task?.due_date       ?? '')
+  const [estimatedCost, setEstimatedCost] = useState(
+    task?.estimated_cost != null ? String(parseFloat(task.estimated_cost)) : ''
+  )
+  const [selectedStaff, setSelectedStaff] = useState(task?.staff ?? null)
   const [staffQuery,    setStaffQuery]    = useState('')
   const [staffList,     setStaffList]     = useState([])
   const [staffLoading,  setStaffLoading]  = useState(true)
   const [saving,        setSaving]        = useState(false)
   const [error,         setError]         = useState('')
+
+  const isEdit = mode === 'edit'
 
   const loadStaff = async (search) => {
     setStaffLoading(true)
@@ -919,14 +923,16 @@ function TaskCreateModal({ jobId, onClose, onCreated }) {
     setSaving(true); setError('')
     const body = {
       name: name.trim(),
-      ...(description.trim()  ? { description: description.trim() }          : {}),
-      ...(selectedStaff       ? { staff_id: selectedStaff.id }               : {}),
-      ...(dueDate             ? { due_date: dueDate }                         : {}),
-      ...(estimatedCost !== '' ? { estimated_cost: parseFloat(estimatedCost) || 0 } : {}),
-      ...(jobId               ? { job_id: jobId }                             : {}),
+      description: description.trim(),
+      staff_id:   selectedStaff?.id ?? null,
+      due_date:   dueDate   || null,
+      estimated_cost: estimatedCost !== '' ? parseFloat(estimatedCost) || 0 : null,
+      ...(!isEdit && jobId ? { job_id: jobId } : {}),
     }
-    const { data, ok } = await apiFetch('notes/tasks/', { method: 'POST', body: JSON.stringify(body) })
-    if (ok && data) { onCreated(data) } else { setError('Failed to create task.'); setSaving(false) }
+    const endpoint = isEdit ? `notes/tasks/${task.id}/` : 'notes/tasks/'
+    const method   = isEdit ? 'PATCH' : 'POST'
+    const { data, ok } = await apiFetch(endpoint, { method, body: JSON.stringify(body) })
+    if (ok && data) { onSaved(data) } else { setError(`Failed to ${isEdit ? 'update' : 'create'} task.`); setSaving(false) }
   }
 
   return (
@@ -938,8 +944,10 @@ function TaskCreateModal({ jobId, onClose, onCreated }) {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#f1f5f9] shrink-0">
           <div>
-            <h3 className="text-[#0f172b] font-bold text-[16px]">New Task</h3>
-            <p className="text-[#90a1b9] text-[11px] mt-0.5">Create a task and attach it to this schedule</p>
+            <h3 className="text-[#0f172b] font-bold text-[16px]">{isEdit ? 'Edit Task' : 'New Task'}</h3>
+            <p className="text-[#90a1b9] text-[11px] mt-0.5">
+              {isEdit ? 'Update the task details below' : 'Create a task and attach it to this schedule'}
+            </p>
           </div>
           <button onClick={onClose} disabled={saving}
             className="w-8 h-8 flex items-center justify-center rounded-[8px] border border-[#e2e8f0] hover:bg-[#f8fafc] text-[#90a1b9] hover:text-[#314158] transition-colors disabled:opacity-40">
@@ -1046,8 +1054,43 @@ function TaskCreateModal({ jobId, onClose, onCreated }) {
           <button onClick={handleSave} disabled={saving || !name.trim()}
             className="flex items-center gap-1.5 px-4 py-[7px] rounded-[9px] bg-[#f54900] hover:bg-[#c73b00] text-white text-[12px] font-semibold transition-colors shadow-[0_1px_3px_rgba(245,73,0,0.3)] disabled:opacity-40">
             {saving
-              ? <><div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin"/>Creating…</>
-              : 'Create Task'}
+              ? <><div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin"/>{isEdit ? 'Saving…' : 'Creating…'}</>
+              : isEdit ? 'Save Changes' : 'Create Task'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── TaskDeleteConfirmModal ────────────────────────────────────────────────────
+function TaskDeleteConfirmModal({ task, deleting, onClose, onConfirm }) {
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#0f172b]/50 backdrop-blur-sm p-4"
+      onClick={e => { if (e.target === e.currentTarget && !deleting) onClose() }}>
+      <div className="bg-white rounded-[14px] shadow-[0_16px_60px_rgba(15,23,43,0.24)] w-full max-w-[400px]"
+        onClick={e => e.stopPropagation()}>
+        <div className="p-5 pb-4">
+          <div className="w-10 h-10 rounded-full bg-[#fff1f2] border border-[#fecdd3] flex items-center justify-center mb-3">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M2 4.5h14M5.5 4.5V3a.5.5 0 01.5-.5h4a.5.5 0 01.5.5v1.5M7 8v5M11 8v5M3.5 4.5l.5 11a.5.5 0 00.5.5h9a.5.5 0 00.5-.5l.5-11" stroke="#c10007" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <h3 className="text-[#0f172b] font-bold text-[16px] mb-1.5">Delete Task</h3>
+          <p className="text-[#62748e] text-[13px] leading-[19px]">
+            <span className="font-semibold text-[#0f172b]">&ldquo;{task.name}&rdquo;</span> will be permanently removed. This cannot be undone.
+          </p>
+        </div>
+        <div className="flex gap-2.5 px-5 pb-5">
+          <button onClick={onClose} disabled={deleting}
+            className="flex-1 py-[9px] rounded-[10px] border border-[#e2e8f0] text-[#314158] text-[13px] font-semibold hover:bg-[#f8fafc] transition-colors disabled:opacity-40">
+            Cancel
+          </button>
+          <button onClick={onConfirm} disabled={deleting}
+            className="flex-1 py-[9px] rounded-[10px] bg-[#c10007] hover:bg-[#9b000a] text-white text-[13px] font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+            {deleting
+              ? <><div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin"/>Deleting…</>
+              : 'Delete Task'}
           </button>
         </div>
       </div>
@@ -1091,6 +1134,9 @@ function NoteModal({ mode, note, date, startTime, onClose, onSaved }) {
   const [tasksLoading,    setTasksLoading]    = useState(false)
   const [showTaskCreate,  setShowTaskCreate]  = useState(false)
   const [taskQuery,       setTaskQuery]       = useState('')
+  const [editingTask,     setEditingTask]     = useState(null)   // task being edited
+  const [deletingTask,    setDeletingTask]    = useState(null)   // task pending deletion
+  const [taskDeleting,    setTaskDeleting]    = useState(false)
 
   // Staff (single select, optional)
   const [selectedStaff,    setSelectedStaff]    = useState(mode === 'edit' ? (note.staff?.[0] ?? null) : null)
@@ -1180,6 +1226,30 @@ function NoteModal({ mode, note, date, startTime, onClose, onSaved }) {
   const toggleTask = (id) =>
     setSelectedTaskIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
+  // Called by TaskCreateModal after a create or edit save
+  const handleTaskSaved = (saved) => {
+    setAvailableTasks(prev =>
+      editingTask ? prev.map(t => t.id === saved.id ? saved : t) : [saved, ...prev]
+    )
+    if (!editingTask && !selectedTaskIds.includes(saved.id))
+      setSelectedTaskIds(prev => [...prev, saved.id])
+    setEditingTask(null)
+    setShowTaskCreate(false)
+  }
+
+  // Called by TaskDeleteConfirmModal after user confirms
+  const handleTaskDelete = async () => {
+    if (!deletingTask) return
+    setTaskDeleting(true)
+    const { ok } = await apiFetch(`notes/tasks/${deletingTask.id}/`, { method: 'DELETE' })
+    if (ok) {
+      setAvailableTasks(prev => prev.filter(t => t.id !== deletingTask.id))
+      setSelectedTaskIds(prev => prev.filter(id => id !== deletingTask.id))
+      setDeletingTask(null)
+    }
+    setTaskDeleting(false)
+  }
+
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!description.trim() && !selectedJob) {
@@ -1214,20 +1284,29 @@ function NoteModal({ mode, note, date, startTime, onClose, onSaved }) {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
-      {showTaskCreate && (
+      {/* Task create / edit modal */}
+      {(showTaskCreate || editingTask) && (
         <TaskCreateModal
+          mode={editingTask ? 'edit' : 'create'}
+          task={editingTask}
           jobId={selectedJob?.id}
-          onClose={() => setShowTaskCreate(false)}
-          onCreated={(newTask) => {
-            setAvailableTasks(prev => [...prev, newTask])
-            setSelectedTaskIds(prev => [...prev, newTask.id])
-            setShowTaskCreate(false)
-          }}
+          onClose={() => { setShowTaskCreate(false); setEditingTask(null) }}
+          onSaved={handleTaskSaved}
+        />
+      )}
+
+      {/* Task delete confirmation */}
+      {deletingTask && (
+        <TaskDeleteConfirmModal
+          task={deletingTask}
+          deleting={taskDeleting}
+          onClose={() => { if (!taskDeleting) setDeletingTask(null) }}
+          onConfirm={handleTaskDelete}
         />
       )}
 
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172b]/50 backdrop-blur-sm p-4"
-        onClick={e => { if (e.target === e.currentTarget && !saving && !showTaskCreate) onClose() }}>
+        onClick={e => { if (e.target === e.currentTarget && !saving && !showTaskCreate && !editingTask && !deletingTask) onClose() }}>
         <div className="bg-white rounded-[16px] shadow-[0_24px_80px_rgba(15,23,43,0.28)] w-full max-w-[820px] flex flex-col overflow-hidden"
           style={{ maxHeight: 'min(92vh, 700px)' }}
           onClick={e => e.stopPropagation()}>
@@ -1437,15 +1516,38 @@ function NoteModal({ mode, note, date, startTime, onClose, onSaved }) {
                     {availableTasks.map(task => {
                       const isSel = selectedTaskIds.includes(task.id)
                       return (
-                        <button key={task.id} type="button" onClick={() => toggleTask(task.id)}
-                          className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-[8px] border text-left transition-colors ${isSel ? 'border-[#f54900]/40 bg-[#fff7f5]' : 'border-[#e2e8f0] bg-white hover:bg-[#f8fafc]'}`}>
-                          <div className={`w-4 h-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors ${isSel ? 'bg-[#f54900] border-[#f54900]' : 'border-[#d1d5db] bg-white'}`}>
-                            {isSel && <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1 4.5l2.5 2.5L8 1.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        <div key={task.id}
+                          className={`group flex items-center rounded-[8px] border transition-colors ${isSel ? 'border-[#f54900]/40 bg-[#fff7f5]' : 'border-[#e2e8f0] bg-white hover:bg-[#f8fafc]'}`}>
+
+                          {/* Checkbox + info — click to toggle selection */}
+                          <button type="button" onClick={() => toggleTask(task.id)}
+                            className="flex items-center gap-2.5 flex-1 min-w-0 px-3 py-2 text-left">
+                            <div className={`w-4 h-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors ${isSel ? 'bg-[#f54900] border-[#f54900]' : 'border-[#d1d5db] bg-white'}`}>
+                              {isSel && <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1 4.5l2.5 2.5L8 1.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                            </div>
+                            <span className="text-[12px] font-semibold text-[#0f172b] truncate flex-1">{task.name}</span>
+                            {task.staff && <span className="text-[10px] text-[#62748e] shrink-0 truncate max-w-[60px]">{task.staff.full_name}</span>}
+                            {task.due_date && <span className="text-[10px] text-[#90a1b9] shrink-0 ml-1">{task.due_date}</span>}
+                          </button>
+
+                          {/* Edit + Delete — visible on row hover */}
+                          <div className="flex items-center gap-0.5 pr-1.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                            <button type="button" onClick={() => setEditingTask(task)}
+                              title="Edit task"
+                              className="w-6 h-6 flex items-center justify-center rounded-[5px] text-[#62748e] hover:text-[#0f172b] hover:bg-[#e2e8f0] transition-colors">
+                              <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                                <path d="M9.5 2.5l2 2-7 7H2.5v-2l7-7z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            </button>
+                            <button type="button" onClick={() => setDeletingTask(task)}
+                              title="Delete task"
+                              className="w-6 h-6 flex items-center justify-center rounded-[5px] text-[#62748e] hover:text-[#c10007] hover:bg-[#fff1f2] transition-colors">
+                              <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                                <path d="M2 3.5h10M5.5 3.5V2.5a1 1 0 011-1h1a1 1 0 011 1v1M6 6v4.5M8 6v4.5M3.5 3.5l.5 8.5a.5.5 0 00.5.5h5a.5.5 0 00.5-.5l.5-8.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                              </svg>
+                            </button>
                           </div>
-                          <span className="text-[12px] font-semibold text-[#0f172b] truncate flex-1">{task.name}</span>
-                          {task.staff && <span className="text-[10px] text-[#62748e] shrink-0 truncate max-w-[70px]">{task.staff.full_name}</span>}
-                          {task.due_date && <span className="text-[10px] text-[#90a1b9] shrink-0">{task.due_date}</span>}
-                        </button>
+                        </div>
                       )
                     })}
                   </div>
