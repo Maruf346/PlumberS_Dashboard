@@ -477,6 +477,7 @@ function WeekNoteCard({
   const showTime    = liveHeight > 42
   const showStaff   = liveHeight > 56
   const showAddress = liveHeight > 72
+  const showTasks   = liveHeight > 90 && (note.tasks?.length ?? 0) > 0
 
   const GAP      = 2
   const colPct   = 100 / totalCols
@@ -537,6 +538,20 @@ function WeekNoteCard({
 
           {showAddress && note.job?.address && (
             <p className="text-[10px] text-[#62748e] leading-[13px] truncate mt-0.5">{note.job.address}</p>
+          )}
+
+          {showTasks && (
+            <div className="flex flex-col mt-0.5">
+              {note.tasks.slice(0, 2).map(t => (
+                <div key={t.id} className="flex items-center gap-1 min-w-0">
+                  <div className="w-1 h-1 rounded-full bg-current opacity-40 shrink-0" />
+                  <span className="text-[10px] font-medium opacity-75 truncate leading-[13px]">{t.name}</span>
+                </div>
+              ))}
+              {note.tasks.length > 2 && (
+                <span className="text-[10px] opacity-50 pl-2 leading-[13px]">+{note.tasks.length - 2} more</span>
+              )}
+            </div>
           )}
 
           {showTime && (
