@@ -1102,18 +1102,20 @@ function NoteModal({ mode, note, date, startTime, onClose, onSaved }) {
     if (!jobQuery.trim()) { setJobResults([]); setJobSearching(false); return }
     setJobSearching(true)
     const t = setTimeout(async () => {
-      const { data, ok } = await apiFetch(`jobs/?page_size=20&search=${encodeURIComponent(jobQuery.trim())}`)
+      const { data, ok } = await apiFetch(`jobs/unique/?page_size=20&search=${encodeURIComponent(jobQuery.trim())}`)
       if (ok && data) setJobResults(data.results ?? [])
       setJobSearching(false)
     }, 400)
     return () => { clearTimeout(t); setJobSearching(false) }
   }, [jobQuery])
 
-  // Load tasks when selected job changes
+  // Load tasks — job-specific when a job is selected, otherwise all tasks
   useEffect(() => {
-    if (!selectedJob?.id) { setAvailableTasks([]); return }
     setTasksLoading(true)
-    apiFetch(`notes/tasks/?job_id=${selectedJob.id}`).then(({ data, ok }) => {
+    const endpoint = selectedJob?.id
+      ? `jobs/${selectedJob.id}/tasks/`
+      : 'notes/tasks/'
+    apiFetch(endpoint).then(({ data, ok }) => {
       if (ok && data) setAvailableTasks(Array.isArray(data) ? data : (data.results ?? []))
       setTasksLoading(false)
     })
@@ -1121,7 +1123,7 @@ function NoteModal({ mode, note, date, startTime, onClose, onSaved }) {
 
   const handleSelectJob = (job) => {
     setSelectedJob(job)
-    if (!job) { setAvailableTasks([]); setSelectedTaskIds([]) }
+    if (!job) setSelectedTaskIds([])
   }
 
   const toggleTask = (id) =>
