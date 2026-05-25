@@ -191,9 +191,9 @@ function hexToCardStyle(hex) {
 function IconChevLeft()  { return <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 14L6 9l5-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg> }
 function IconChevRight() { return <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M7 4l5 5-5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg> }
 function IconClock()     { return <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" strokeWidth="1.1"/><path d="M5.5 3v2.5l1.5 1" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg> }
-// function IconGrip()      { return <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="4" cy="3" r="1" fill="currentColor"/><circle cx="8" cy="3" r="1" fill="currentColor"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="8" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="9" r="1" fill="currentColor"/><circle cx="8" cy="9" r="1" fill="currentColor"/></svg> }
+function IconGrip()      { return <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="4" cy="3" r="1" fill="currentColor"/><circle cx="8" cy="3" r="1" fill="currentColor"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="8" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="9" r="1" fill="currentColor"/><circle cx="8" cy="9" r="1" fill="currentColor"/></svg> }
 function IconBriefcase() { return <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="4" width="11" height="8" rx="1.2" stroke="currentColor" strokeWidth="1.1"/><path d="M4.5 4V3A1.5 1.5 0 016 1.5h1A1.5 1.5 0 018.5 3v1" stroke="currentColor" strokeWidth="1.1"/></svg> }
-// function IconCalPlus()   { return <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.2"/><path d="M5 1.5v2M10 1.5v2M1 6.5h13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M7.5 9v3M6 10.5h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> }
+function IconCalPlus()   { return <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.2"/><path d="M5 1.5v2M10 1.5v2M1 6.5h13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M7.5 9v3M6 10.5h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> }
 function IconX()         { return <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg> }
 
 // ── Start-time picker modal (month / day drag-drop) ───────────────────────────
@@ -294,9 +294,19 @@ function NoteDetailPopup({ note, position }) {
           </span>
         </div>
         {note.tasks?.length > 0 && (
-          <div className="flex items-center justify-between">
-            <span className="text-[#62748e]">Tasks:</span>
-            <span className="font-semibold text-[#0f172b]">{note.tasks.length}</span>
+          <div className="border-t border-[#f1f5f9] pt-2 mt-1">
+            <span className="text-[#62748e] text-[11px] font-semibold uppercase tracking-[0.4px]">Tasks</span>
+            <div className="flex flex-col gap-1 mt-1.5">
+              {note.tasks.slice(0, 4).map(t => (
+                <div key={t.id} className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#f54900] shrink-0" />
+                  <span className="text-[12px] text-[#314158] font-medium line-clamp-1">{t.name}</span>
+                </div>
+              ))}
+              {note.tasks.length > 4 && (
+                <span className="text-[11px] text-[#90a1b9] pl-3">+{note.tasks.length - 4} more</span>
+              )}
+            </div>
           </div>
         )}
         {note.description && (
@@ -341,17 +351,30 @@ function NoteChip({ note, onDragStart, onClick, onContextMenu }) {
               {note.job.job_id}
             </span>
           )}
-          <span className={`text-[9px] font-bold line-clamp-1 ${firstStaff ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
+          <span className={`text-[11px] font-bold line-clamp-1 ${firstStaff ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
             {firstStaff ? firstStaff.full_name : 'Unassigned'}
           </span>
         </div>
-        <p className="text-[11px] font-bold text-[#0f172b] leading-[14px] break-words line-clamp-2">
+        <p className="text-[13px] font-bold text-[#0f172b] leading-[16px] break-words line-clamp-2">
           {note.title || note.description || '—'}
         </p>
         {note.job?.address && (
-          <p className="text-[9px] text-[#62748e] leading-[12px] line-clamp-1">{note.job.address}</p>
+          <p className="text-[10px] text-[#62748e] leading-[13px] line-clamp-1">{note.job.address}</p>
         )}
-        <div className="flex items-center gap-0.5 text-[9px] font-semibold text-[#0f172b]">
+        {note.tasks?.length > 0 && (
+          <div className="flex flex-col gap-0.5">
+            {note.tasks.slice(0, 2).map(t => (
+              <div key={t.id} className="flex items-center gap-1">
+                <div className="w-1 h-1 rounded-full bg-current opacity-50 shrink-0" />
+                <span className="text-[10px] font-medium opacity-80 line-clamp-1">{t.name}</span>
+              </div>
+            ))}
+            {note.tasks.length > 2 && (
+              <span className="text-[10px] opacity-60 pl-2">+{note.tasks.length - 2} more</span>
+            )}
+          </div>
+        )}
+        <div className="flex items-center gap-0.5 text-[10px] font-semibold text-[#0f172b]">
           <IconClock /> {note.scheduledTime}
         </div>
       </div>
@@ -1047,11 +1070,12 @@ function NoteModal({ mode, note, date, startTime, onClose, onSaved }) {
   const [jobResults,   setJobResults]   = useState([])
   const [jobSearching, setJobSearching] = useState(false)
 
-  // Tasks (only when job selected)
+  // Tasks
   const [availableTasks,  setAvailableTasks]  = useState([])
   const [selectedTaskIds, setSelectedTaskIds] = useState(mode === 'edit' ? (note.tasks?.map(t => t.id) ?? []) : [])
   const [tasksLoading,    setTasksLoading]    = useState(false)
   const [showTaskCreate,  setShowTaskCreate]  = useState(false)
+  const [taskQuery,       setTaskQuery]       = useState('')
 
   // Staff (single select, optional)
   const [selectedStaff,    setSelectedStaff]    = useState(mode === 'edit' ? (note.staff?.[0] ?? null) : null)
@@ -1109,15 +1133,27 @@ function NoteModal({ mode, note, date, startTime, onClose, onSaved }) {
     return () => { clearTimeout(t); setJobSearching(false) }
   }, [jobQuery])
 
-  // Load tasks — job-specific when a job is selected, otherwise all tasks
+  // Load all tasks — debounced search via notes/tasks/?search=
   useEffect(() => {
     setTasksLoading(true)
-    const endpoint = selectedJob?.id
-      ? `jobs/${selectedJob.id}/tasks/`
-      : 'notes/tasks/'
-    apiFetch(endpoint).then(({ data, ok }) => {
+    const t = setTimeout(async () => {
+      const params = new URLSearchParams({ page_size: '50' })
+      if (taskQuery.trim()) params.set('search', taskQuery.trim())
+      const { data, ok } = await apiFetch(`notes/tasks/?${params}`)
       if (ok && data) setAvailableTasks(Array.isArray(data) ? data : (data.results ?? []))
       setTasksLoading(false)
+    }, taskQuery ? 300 : 0)
+    return () => clearTimeout(t)
+  }, [taskQuery]) // eslint-disable-line
+
+  // When a job is newly selected in create mode, pre-select its already-linked tasks
+  useEffect(() => {
+    if (!selectedJob?.id || mode === 'edit') return
+    apiFetch(`jobs/${selectedJob.id}/tasks/`).then(({ data, ok }) => {
+      if (ok && data) {
+        const ids = (Array.isArray(data) ? data : (data.results ?? [])).map(t => t.id)
+        if (ids.length) setSelectedTaskIds(ids)
+      }
     })
   }, [selectedJob?.id]) // eslint-disable-line
 
@@ -1316,7 +1352,7 @@ function NoteModal({ mode, note, date, startTime, onClose, onSaved }) {
                     <path d="M9 9l3 3" stroke="#90a1b9" strokeWidth="1.1" strokeLinecap="round"/>
                   </svg>
                   <input type="text" value={jobQuery} onChange={e => setJobQuery(e.target.value)}
-                    placeholder="Search by job ID, name or client…"
+                    placeholder="Search by job ID, name, client or insured address…"
                     className="w-full h-[36px] pl-8 pr-3 border border-[#e2e8f0] rounded-[8px] text-[13px] placeholder:text-[#90a1b9] focus:outline-none focus:ring-2 focus:ring-[#f54900]/20 focus:border-[#f54900]/40 transition-colors" />
                 </div>
 
@@ -1343,41 +1379,63 @@ function NoteModal({ mode, note, date, startTime, onClose, onSaved }) {
                 )}
               </div>
 
-              {/* Tasks — only when job selected */}
-              {selectedJob && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-[11px] font-bold text-[#90a1b9] uppercase tracking-[0.5px]">
-                      Task <span className="text-[#90a1b9] font-normal normal-case">(optional)</span>
-                    </p>
-                    <button type="button" onClick={() => setShowTaskCreate(true)}
-                      className="w-7 h-7 flex items-center justify-center rounded-[7px] bg-[#f54900] hover:bg-[#c73b00] text-white transition-colors shadow-[0_1px_3px_rgba(245,73,0,0.3)]">
-                      <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              {/* Tasks — always visible */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[11px] font-bold text-[#90a1b9] uppercase tracking-[0.5px]">
+                    Tasks <span className="text-[#90a1b9] font-normal normal-case">(optional)</span>
+                    {selectedTaskIds.length > 0 && (
+                      <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#f54900] text-white text-[10px] font-bold">{selectedTaskIds.length}</span>
+                    )}
+                  </p>
+                  <button type="button" onClick={() => setShowTaskCreate(true)}
+                    className="w-7 h-7 flex items-center justify-center rounded-[7px] bg-[#f54900] hover:bg-[#c73b00] text-white transition-colors shadow-[0_1px_3px_rgba(245,73,0,0.3)]">
+                    <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                  </button>
+                </div>
+
+                {/* Task search */}
+                <div className="relative mb-2">
+                  <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <circle cx="5" cy="5" r="3.5" stroke="#90a1b9" strokeWidth="1.1"/>
+                    <path d="M8.5 8.5l2.5 2.5" stroke="#90a1b9" strokeWidth="1.1" strokeLinecap="round"/>
+                  </svg>
+                  <input type="text" value={taskQuery} onChange={e => setTaskQuery(e.target.value)}
+                    placeholder="Search tasks…"
+                    className="w-full h-[32px] pl-7 pr-3 border border-[#e2e8f0] rounded-[7px] text-[12px] placeholder:text-[#90a1b9] focus:outline-none focus:ring-2 focus:ring-[#f54900]/20 focus:border-[#f54900]/40 transition-colors bg-[#f8fafc]" />
+                  {taskQuery && (
+                    <button type="button" onClick={() => setTaskQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#90a1b9] hover:text-[#314158]">
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
                     </button>
-                  </div>
-                  {tasksLoading ? (
-                    <div className="flex justify-center py-4"><div className="w-4 h-4 rounded-full border-2 border-[#e2e8f0] border-t-[#f54900] animate-spin"/></div>
-                  ) : availableTasks.length === 0 ? (
-                    <p className="text-[#90a1b9] text-[12px] text-center py-3 border border-dashed border-[#e2e8f0] rounded-[8px]">No tasks yet. Click + to create one.</p>
-                  ) : (
-                    <div className="flex flex-col gap-1 max-h-[140px] overflow-y-auto">
-                      {availableTasks.map(task => {
-                        const isSel = selectedTaskIds.includes(task.id)
-                        return (
-                          <button key={task.id} type="button" onClick={() => toggleTask(task.id)}
-                            className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-[8px] border text-left transition-colors ${isSel ? 'border-[#f54900]/40 bg-[#fff7f5]' : 'border-[#e2e8f0] bg-white hover:bg-[#f8fafc]'}`}>
-                            <div className={`w-4 h-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors ${isSel ? 'bg-[#f54900] border-[#f54900]' : 'border-[#d1d5db] bg-white'}`}>
-                              {isSel && <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1 4.5l2.5 2.5L8 1.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                            </div>
-                            <span className="text-[12px] font-semibold text-[#0f172b] truncate flex-1">{task.name}</span>
-                            {task.due_date && <span className="text-[10px] text-[#90a1b9] shrink-0">{task.due_date}</span>}
-                          </button>
-                        )
-                      })}
-                    </div>
                   )}
                 </div>
-              )}
+
+                {tasksLoading ? (
+                  <div className="flex justify-center py-4"><div className="w-4 h-4 rounded-full border-2 border-[#e2e8f0] border-t-[#f54900] animate-spin"/></div>
+                ) : availableTasks.length === 0 ? (
+                  <p className="text-[#90a1b9] text-[12px] text-center py-3 border border-dashed border-[#e2e8f0] rounded-[8px]">
+                    {taskQuery ? `No tasks match "${taskQuery}"` : 'No tasks yet. Click + to create one.'}
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-1 max-h-[150px] overflow-y-auto pr-0.5">
+                    {availableTasks.map(task => {
+                      const isSel = selectedTaskIds.includes(task.id)
+                      return (
+                        <button key={task.id} type="button" onClick={() => toggleTask(task.id)}
+                          className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-[8px] border text-left transition-colors ${isSel ? 'border-[#f54900]/40 bg-[#fff7f5]' : 'border-[#e2e8f0] bg-white hover:bg-[#f8fafc]'}`}>
+                          <div className={`w-4 h-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors ${isSel ? 'bg-[#f54900] border-[#f54900]' : 'border-[#d1d5db] bg-white'}`}>
+                            {isSel && <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1 4.5l2.5 2.5L8 1.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          </div>
+                          <span className="text-[12px] font-semibold text-[#0f172b] truncate flex-1">{task.name}</span>
+                          {task.staff && <span className="text-[10px] text-[#62748e] shrink-0 truncate max-w-[70px]">{task.staff.full_name}</span>}
+                          {task.due_date && <span className="text-[10px] text-[#90a1b9] shrink-0">{task.due_date}</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1680,7 +1738,35 @@ export default function SchedulePage() {
     setDeleting(false)
   }, [confirmDelete])
 
-  // const showPanel = viewMode === 'month'
+  const showPanel = viewMode === 'week'
+
+  // ── Unscheduled panel state ────────────────────────────────────────────────
+  const unscheduledNotes = notes.filter(n => !n._isScheduled)
+  const [isDraggingOverPanel, setIsDraggingOverPanel] = useState(false)
+
+  const handleDropToUnscheduled = async (e) => {
+    e.preventDefault()
+    setIsDraggingOverPanel(false)
+    const note = draggingNote.current
+    draggingNote.current = null
+    if (!note || !note._isScheduled) return
+
+    setNotes(prev => prev.map(n =>
+      n.id === note.id
+        ? { ...n, scheduledDate: null, _isScheduled: false, endTime: null }
+        : n
+    ))
+
+    try {
+      const { ok } = await apiFetch(`notes/${note.id}/`, {
+        method: 'PATCH',
+        body: JSON.stringify({ scheduled_datetime: null, end_time: null }),
+      })
+      if (!ok) setNotes(prev => prev.map(n => n.id === note.id ? note : n))
+    } catch {
+      setNotes(prev => prev.map(n => n.id === note.id ? note : n))
+    }
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -1733,44 +1819,77 @@ export default function SchedulePage() {
 
       <div className="flex gap-0 h-full min-h-0">
 
-        {/* ── LEFT: panel — month view only (no panel in week view) ── */}
-        {/* {showPanel && (
-          <div className="w-[220px] shrink-0 border-r border-[#e2e8f0] bg-white flex flex-col">
-            <div className="px-4 py-4 border-b border-[#f1f5f9]">
+        {/* ── LEFT: Unscheduled panel — week view only ── */}
+        {showPanel && (
+          <div
+            className={[
+              'w-[220px] shrink-0 border-r border-[#e2e8f0] bg-white flex flex-col transition-colors duration-150',
+              isDraggingOverPanel ? 'bg-[#fff7f5] border-[#f54900]/30' : '',
+            ].join(' ')}
+            onDragOver={e => { e.preventDefault(); setIsDraggingOverPanel(true) }}
+            onDragLeave={() => setIsDraggingOverPanel(false)}
+            onDrop={handleDropToUnscheduled}
+          >
+            {/* Header */}
+            <div className="px-4 py-3.5 border-b border-[#f1f5f9]">
               <div className="flex items-center gap-2">
-                <span className="text-[#62748e]"><IconBriefcase /></span>
-                <h3 className="text-[#0f172b] font-bold text-[13px]">Notes</h3>
-                <span className="ml-auto text-[11px] font-bold text-white bg-[#f54900] rounded-full w-5 h-5 flex items-center justify-center shrink-0">
-                  {notes.length}
-                </span>
+                <span className="text-[#62748e]"><IconCalPlus /></span>
+                <h3 className="text-[#0f172b] font-bold text-[13px]">Unscheduled</h3>
+                {unscheduledNotes.length > 0 && (
+                  <span className="ml-auto text-[11px] font-bold text-white bg-[#f54900] rounded-full w-5 h-5 flex items-center justify-center shrink-0">
+                    {unscheduledNotes.length}
+                  </span>
+                )}
               </div>
-              <p className="text-[#90a1b9] text-[11px] mt-1 leading-[16px]">
-                Drag notes onto the calendar to reschedule
+              <p className="text-[#90a1b9] text-[11px] mt-1 leading-[15px]">
+                Drag onto the calendar to schedule. Drop here to unschedule.
               </p>
             </div>
+
+            {/* Drop-here indicator */}
+            {isDraggingOverPanel && (
+              <div className="mx-3 mt-3 px-3 py-2.5 rounded-[8px] border-2 border-dashed border-[#f54900]/50 bg-[#fff7f5] flex items-center justify-center gap-1.5">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v7M3 5l3 3 3-3" stroke="#f54900" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/><path d="M1 10h10" stroke="#f54900" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                <span className="text-[11px] font-semibold text-[#f54900]">Drop to unschedule</span>
+              </div>
+            )}
+
+            {/* List */}
             <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
               {loading ? (
                 <div className="flex justify-center py-8">
                   <div className="w-5 h-5 rounded-full border-2 border-[#e2e8f0] border-t-[#f54900] animate-spin"/>
                 </div>
-              ) : notes.length === 0 ? (
+              ) : unscheduledNotes.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
                   <span className="text-[#e2e8f0]"><IconCalPlus /></span>
-                  <p className="text-[#cad5e2] text-[12px]">No notes yet</p>
+                  <p className="text-[#cad5e2] text-[12px]">No unscheduled notes</p>
                 </div>
-              ) : notes.map(note => (
-                <div key={note.id} draggable onDragStart={e => handleDragStart(e, note)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-[8px] border border-[#e2e8f0] bg-white hover:border-[#f54900]/40 hover:bg-[#fff9f7] cursor-grab active:cursor-grabbing transition-all select-none">
-                  <span className="text-[#cad5e2] shrink-0"><IconGrip /></span>
+              ) : unscheduledNotes.map(note => (
+                <div key={note.id} draggable
+                  onDragStart={e => { draggingNote.current = note; e.dataTransfer.effectAllowed = 'move' }}
+                  onDragEnd={() => { draggingNote.current = null }}
+                  className="flex items-start gap-2.5 px-2.5 py-2 rounded-[8px] border border-[#e2e8f0] bg-white hover:border-[#f54900]/40 hover:bg-[#fff9f7] cursor-grab active:cursor-grabbing transition-all select-none">
+                  <span className="text-[#cad5e2] shrink-0 mt-0.5"><IconGrip /></span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[#0f172b] text-[12px] font-bold truncate">{note.title || note.description || '—'}</p>
-                    {note.job && <p className="text-[#314158] text-[11px] font-medium truncate">{note.job.job_id}</p>}
+                    <p className="text-[#0f172b] text-[12px] font-bold truncate leading-[16px]">
+                      {note.title || note.description || '—'}
+                    </p>
+                    {note.job && (
+                      <p className="text-[#f54900] text-[10px] font-semibold truncate mt-0.5">{note.job.job_id}</p>
+                    )}
+                    {note.tasks?.length > 0 && (
+                      <p className="text-[#90a1b9] text-[10px] truncate mt-0.5">{note.tasks.map(t => t.name).join(', ')}</p>
+                    )}
+                    {note.staff?.[0] && (
+                      <p className="text-[#62748e] text-[10px] truncate mt-0.5">{note.staff[0].full_name}</p>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        )} */}
+        )}
 
         {/* ── RIGHT: Calendar ── */}
         <div className={`flex-1 min-w-0 flex flex-col gap-5 ${viewMode === 'week' ? 'p-4 pb-2' : 'p-6'}`}

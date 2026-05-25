@@ -42,7 +42,7 @@ export default function DashboardPage() {
   useEffect(() => {
     Promise.all([
       apiFetch('jobs/dashboard/'),
-      apiFetch('jobs/?page_size=10'),
+      apiFetch('jobs/unique/?page_size=10'),
       apiFetch('inspections/?has_issue=true&page_size=5'),
       apiFetch('jobs/activities/recent/'),
     ]).then(([s, j, ins, act]) => {
