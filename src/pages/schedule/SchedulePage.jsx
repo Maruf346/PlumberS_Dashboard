@@ -1473,8 +1473,8 @@ function NoteModal({ mode, note, date, startTime, onClose, onSaved }) {
                 )}
               </div>
 
-              {/* Tasks — always visible */}
-              <div>
+              {/* Tasks — only when a job is selected */}
+              {selectedJob && <div>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[11px] font-bold text-[#90a1b9] uppercase tracking-[0.5px]">
                     Tasks <span className="text-[#90a1b9] font-normal normal-case">(optional)</span>
@@ -1552,7 +1552,7 @@ function NoteModal({ mode, note, date, startTime, onClose, onSaved }) {
                     })}
                   </div>
                 )}
-              </div>
+              </div>}
             </div>
           </div>
 
