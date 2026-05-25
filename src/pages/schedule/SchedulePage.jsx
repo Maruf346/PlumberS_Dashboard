@@ -276,9 +276,9 @@ function NoteDetailPopup({ note, position }) {
           </div>
         )}
         {note.job?.address && (
-          <div className="flex items-start gap-3">
+          <div className="flex items-start justify-between gap-3">
             <span className="text-[#62748e] shrink-0">Address:</span>
-            <span className="font-semibold text-[#0f172b] text-right leading-[15px]">{note.job.address}</span>
+            <span className="font-semibold text-[#0f172b] text-right leading-[15px] max-w-[160px]">{note.job.address}</span>
           </div>
         )}
         <div className="flex items-center justify-between">
@@ -518,29 +518,29 @@ function WeekNoteCard({
           {/* Job badge + staff row */}
           <div className="flex items-center gap-1 flex-wrap">
             {note.job && (
-              <span className={`inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${jobStatus?.border ?? 'border-[#e2e8f0]'} ${jobStatus?.bg ?? 'bg-[#f8fafc]'} ${jobStatus?.text ?? 'text-[#314158]'}`}>
+              <span className={`inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${jobStatus?.border ?? 'border-[#e2e8f0]'} ${jobStatus?.bg ?? 'bg-[#f8fafc]'} ${jobStatus?.text ?? 'text-[#314158]'}`}>
                 {note.job.job_id}
               </span>
             )}
             {showStaff && (
-              <span className={`text-[9px] font-bold truncate ${firstStaff ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
+              <span className={`text-[11px] font-bold truncate ${firstStaff ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
                 {firstStaff ? firstStaff.full_name : 'Unassigned'}
               </span>
             )}
           </div>
 
           {showBody && (
-            <p className="text-[10px] font-bold text-[#0f172b] leading-[13px] mt-0.5 truncate">
+            <p className="text-[12px] font-bold text-[#0f172b] leading-[15px] mt-0.5 truncate">
               {note.title || note.description || '—'}
             </p>
           )}
 
           {showAddress && note.job?.address && (
-            <p className="text-[9px] text-[#62748e] leading-[12px] truncate mt-0.5">{note.job.address}</p>
+            <p className="text-[10px] text-[#62748e] leading-[13px] truncate mt-0.5">{note.job.address}</p>
           )}
 
           {showTime && (
-            <div className="flex items-center gap-0.5 text-[9px] font-semibold text-[#0f172b] mt-0.5">
+            <div className="flex items-center gap-0.5 text-[11px] font-semibold text-[#0f172b] mt-0.5">
               <IconClock />
               <span>{note.scheduledTime}{note.endTime ? ` – ${note.endTime}` : ''}</span>
             </div>
