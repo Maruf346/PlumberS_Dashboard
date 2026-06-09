@@ -1435,7 +1435,10 @@ function NoteModal({ mode, note, date, startTime, onClose, onSaved }) {
                       <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1 4.5l2.5 2.5L8 1.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </div>
                     <span className="text-[12px] font-bold text-[#f54900] shrink-0">{selectedJob.job_id}</span>
-                    <span className="text-[12px] text-[#62748e] truncate flex-1">{selectedJob.client_name ?? selectedJob.job_name ?? '—'}</span>
+                    <span className="text-[12px] text-[#62748e] truncate flex-1">
+                      {selectedJob.client_name ?? selectedJob.job_name ?? '—'}
+                      {selectedJob.insured_address && ` • ${selectedJob.insured_address}`}
+                    </span>
                     <button type="button" onClick={() => handleSelectJob(null)} className="text-[#90a1b9] hover:text-[#314158] shrink-0 transition-colors"><IconX /></button>
                   </div>
                 )}
@@ -1461,7 +1464,14 @@ function NoteModal({ mode, note, date, startTime, onClose, onSaved }) {
                         <button key={job.id} type="button" onClick={() => handleSelectJob(isSel ? null : job)}
                           className={`flex items-center gap-2 w-full px-3 py-2 rounded-[8px] border text-left transition-colors ${isSel ? 'border-[#f54900]/40 bg-[#fff7f5]' : 'border-[#e2e8f0] bg-white hover:bg-[#f8fafc]'}`}>
                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${sc.border} ${sc.bg} ${sc.text}`}>{job.job_id}</span>
-                          <span className="text-[12px] font-semibold text-[#0f172b] truncate flex-1">{job.client_name ?? job.job_name ?? '—'}</span>
+                          <span className="text-[12px] font-semibold text-[#0f172b] truncate flex-1">
+                            {job.client_name ?? job.job_name ?? '—'}
+                            {job.insured_address && (
+                              <span className="text-[11px] font-normal text-[#62748e] ml-1.5">
+                                • {job.insured_address}
+                              </span>
+                            )}
+                          </span>
                           {isSel && <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="shrink-0 text-[#f54900]"><path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                         </button>
                       )
