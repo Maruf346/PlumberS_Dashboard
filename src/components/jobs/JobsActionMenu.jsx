@@ -12,6 +12,14 @@ function IconDots() {
   )
 }
 function IconEye()   { return <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><ellipse cx="7" cy="7" rx="5.5" ry="3.5" stroke="#62748e" strokeWidth="1.1"/><circle cx="7" cy="7" r="1.5" fill="#62748e"/></svg> }
+function IconCalendar() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <rect x="1.5" y="2.5" width="11" height="10" rx="1.5" stroke="#62748e" strokeWidth="1.1"/>
+      <path d="M4.5 1.5v2M9.5 1.5v2M1.5 5.5h11" stroke="#62748e" strokeWidth="1.1" strokeLinecap="round"/>
+    </svg>
+  )
+}
 function IconEdit()  { return <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9.5 2l2.5 2.5-7 7H2.5V9l7-7z" stroke="#62748e" strokeWidth="1.1" strokeLinejoin="round"/></svg> }
 function IconTrash() { return <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 3.5h11M4 3.5V2h6v1.5M5 6v4.5M9 6v4.5M2.5 3.5l1 9h7l1-9" stroke="#c10007" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/></svg> }
 
@@ -29,6 +37,7 @@ export default function JobsActionMenu({ jobId, onDelete }) {
   }, [open])
 
   const handleView = (e) => { e.stopPropagation(); setOpen(false); navigate(`/admin/jobs/${jobId}`) }
+  const handleSchedule = (e) => { e.stopPropagation(); setOpen(false); navigate(`/admin/schedule`) }
   const handleEdit = (e) => { e.stopPropagation(); setOpen(false); onEdit?.() }
   const handleDelete = (e) => { e.stopPropagation(); setOpen(false); onDelete?.(jobId) }
 
@@ -45,6 +54,9 @@ export default function JobsActionMenu({ jobId, onDelete }) {
         <div className="absolute right-0 top-8 z-50 w-[152px] bg-white border border-[#e2e8f0] rounded-[10px] shadow-[0px_4px_16px_rgba(15,23,43,0.12)] py-1 overflow-hidden">
           <button onClick={handleView}  className="flex items-center gap-2.5 w-full px-3 py-2 text-[13px] text-[#314158] hover:bg-[#f8fafc] transition-colors">
             <IconEye />  View Details
+          </button>
+          <button onClick={handleSchedule}  className="flex items-center gap-2.5 w-full px-3 py-2 text-[13px] text-[#314158] hover:bg-[#f8fafc] transition-colors">
+            <IconCalendar />  Open Scheduler
           </button>
           {/* <button onClick={handleEdit}  className="flex items-center gap-2.5 w-full px-3 py-2 text-[13px] text-[#314158] hover:bg-[#f8fafc] transition-colors">
             <IconEdit /> Edit Job
