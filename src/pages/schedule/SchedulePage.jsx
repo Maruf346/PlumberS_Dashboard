@@ -6,7 +6,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useNavigate }                               from 'react-router-dom'
+import { useNavigate, useLocation }                  from 'react-router-dom'
 import { apiFetch }                                  from '@/utils/apiFetch'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -1099,7 +1099,7 @@ function TaskDeleteConfirmModal({ task, deleting, onClose, onConfirm }) {
 }
 
 // ── NoteModal: create (double-click empty slot) / edit (double-click card) ────
-function NoteModal({ mode, note, date, startTime, onClose, onSaved }) {
+function NoteModal({ mode, note, date, startTime, preselectedJob, onClose, onSaved }) {
   // ── Init times ────────────────────────────────────────────────────────────
   const rawStart = mode === 'edit'
     ? (note.scheduledTime ?? '09:00')
@@ -1123,7 +1123,7 @@ function NoteModal({ mode, note, date, startTime, onClose, onSaved }) {
   const [description, setDescription] = useState(mode === 'edit' ? (note.description ?? '') : '')
 
   // Job
-  const [selectedJob,  setSelectedJob]  = useState(mode === 'edit' ? (note.job ?? null) : null)
+  const [selectedJob,  setSelectedJob]  = useState(mode === 'edit' ? (note.job ?? null) : (preselectedJob ?? null))
   const [jobQuery,     setJobQuery]     = useState('')
   const [jobResults,   setJobResults]   = useState([])
   const [jobSearching, setJobSearching] = useState(false)
@@ -1596,6 +1596,7 @@ function NoteModal({ mode, note, date, startTime, onClose, onSaved }) {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function SchedulePage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const today    = new Date()
 
   // ── View state ─────────────────────────────────────────────────────────────
@@ -1635,6 +1636,16 @@ export default function SchedulePage() {
   }, [])
 
   useEffect(() => { fetchNotes() }, [fetchNotes])
+
+  useEffect(() => {
+    if (location.state?.preselectedJob) {
+      setNoteModal({
+        mode: 'create',
+        preselectedJob: location.state.preselectedJob
+      })
+      navigate(location.pathname, { replace: true, state: {} })
+    }
+  }, [location, navigate])
 
   // ── Navigation helpers — week starts Monday ────────────────────────────────
   const getWeekStart = (year, month, day) => {
@@ -1905,6 +1916,7 @@ export default function SchedulePage() {
           note={noteModal.note}
           date={noteModal.date}
           startTime={noteModal.startTime}
+          preselectedJob={noteModal.preselectedJob}
           onClose={() => setNoteModal(null)}
           onSaved={handleNoteSaved}
         />

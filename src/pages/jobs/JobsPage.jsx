@@ -320,7 +320,7 @@ export default function JobsPage() {
                     </td>
 
                     <td className="px-4 py-[15px] text-right" onClick={e => e.stopPropagation()}>
-                      <JobsActionMenu jobId={job.id} onDelete={() => setDeleteTarget(job)} onEdit={() => setEditTarget(job)} />
+                      <JobsActionMenu job={job} jobId={job.id} onDelete={() => setDeleteTarget(job)} onEdit={() => setEditTarget(job)} />
                     </td>
                   </tr>
                 ))}

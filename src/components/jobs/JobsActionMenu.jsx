@@ -23,7 +23,7 @@ function IconCalendar() {
 function IconEdit()  { return <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9.5 2l2.5 2.5-7 7H2.5V9l7-7z" stroke="#62748e" strokeWidth="1.1" strokeLinejoin="round"/></svg> }
 function IconTrash() { return <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 3.5h11M4 3.5V2h6v1.5M5 6v4.5M9 6v4.5M2.5 3.5l1 9h7l1-9" stroke="#c10007" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/></svg> }
 
-export default function JobsActionMenu({ jobId, onDelete }) {
+export default function JobsActionMenu({ job, jobId, onDelete }) {
   const [open, setOpen] = useState(false)
   const ref             = useRef(null)
   const navigate        = useNavigate()
@@ -37,7 +37,11 @@ export default function JobsActionMenu({ jobId, onDelete }) {
   }, [open])
 
   const handleView = (e) => { e.stopPropagation(); setOpen(false); navigate(`/admin/jobs/${jobId}`) }
-  const handleSchedule = (e) => { e.stopPropagation(); setOpen(false); navigate(`/admin/schedule`) }
+  const handleSchedule = (e) => {
+    e.stopPropagation()
+    setOpen(false)
+    navigate(`/admin/schedule`, { state: { preselectedJob: job } })
+  }
   const handleEdit = (e) => { e.stopPropagation(); setOpen(false); onEdit?.() }
   const handleDelete = (e) => { e.stopPropagation(); setOpen(false); onDelete?.(jobId) }
 
