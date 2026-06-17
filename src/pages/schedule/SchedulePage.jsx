@@ -1622,6 +1622,7 @@ export default function SchedulePage() {
   const [contextMenu,   setContextMenu]   = useState(null)  // { note, x, y }
   const [confirmDelete, setConfirmDelete] = useState(null)  // { note }
   const [deleting,      setDeleting]      = useState(false)
+  const [preselectedJob, setPreselectedJob] = useState(null)
 
   // ── Fetch all notes (API returns flat array, no pagination) ───────────────
   const fetchNotes = useCallback(async (silent = false) => {
@@ -1639,10 +1640,7 @@ export default function SchedulePage() {
 
   useEffect(() => {
     if (location.state?.preselectedJob) {
-      setNoteModal({
-        mode: 'create',
-        preselectedJob: location.state.preselectedJob
-      })
+      setPreselectedJob(location.state.preselectedJob)
       navigate(location.pathname, { replace: true, state: {} })
     }
   }, [location, navigate])
@@ -1819,11 +1817,12 @@ export default function SchedulePage() {
 
   // ── Note modal handlers ────────────────────────────────────────────────────
   const handleDoubleClickSlot = useCallback((day, startTime) => {
-    setNoteModal({ mode: 'create', date: day, startTime })
-  }, [])
+    setNoteModal({ mode: 'create', date: day, startTime, preselectedJob })
+  }, [preselectedJob])
 
   const handleNoteSaved = useCallback(() => {
     setNoteModal(null)
+    setPreselectedJob(null)
     fetchNotes(true)
   }, [fetchNotes])
 
@@ -2072,6 +2071,25 @@ export default function SchedulePage() {
               </div>
             </div>
           </div>
+
+          {preselectedJob && (
+            <div className="flex items-center justify-between px-4 py-2.5 rounded-[10px] bg-[#fff7f5] border border-[#f54900]/30 shadow-sm shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-5 h-5 rounded-full bg-[#f54900] flex items-center justify-center shrink-0">
+                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                    <circle cx="6" cy="6" r="4.5" stroke="white" strokeWidth="1.2"/>
+                    <path d="M6 4.5v2M6 8v.5" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                </div>
+                <span className="text-[13px] text-[#0f172b] truncate">
+                  Scheduling Job <span className="font-bold text-[#f54900]">{preselectedJob.job_id}</span> ({preselectedJob.client_name ?? preselectedJob.job_name ?? '—'}). Double-click any time slot on the calendar to schedule.
+                </span>
+              </div>
+              <button onClick={() => setPreselectedJob(null)} className="text-[#62748e] hover:text-[#c10007] text-[12px] font-semibold transition-colors shrink-0 ml-4">
+                Cancel
+              </button>
+            </div>
+          )}
 
           {/* Calendar card */}
           <div className={`bg-white border border-[#e2e8f0] rounded-[14px] overflow-hidden shadow-[0px_1px_3px_rgba(0,0,0,0.07)] ${viewMode === 'week' ? 'flex-1 min-h-0 flex flex-col' : ''}`}>
