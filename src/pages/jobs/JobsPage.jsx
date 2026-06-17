@@ -258,8 +258,8 @@ export default function JobsPage() {
             <table className="w-full min-w-[900px]">
               <thead className="sticky top-0 z-10">
                 <tr className="bg-[#f8fafc] border-b border-[#e2e8f0]">
-                  {['Job ID', 'Client Details', 'Schedule', 'Assigned To', 'Vehicle', 'Status', 'Priority', 'Created', ''].map((col, i) => (
-                    <th key={i} className={`px-4 py-[13px] text-[13px] font-bold text-[#62748e] leading-[20px] whitespace-nowrap ${i === 8 ? 'text-right' : 'text-left'}`}>
+                  {['Job ID', 'Client Details', 'Insured Details', 'Insured Address', 'Schedule', 'Assigned To', 'Vehicle', 'Status', 'Priority', 'Created', ''].map((col, i) => (
+                    <th key={i} className={`px-4 py-[13px] text-[13px] font-bold text-[#62748e] leading-[20px] whitespace-nowrap ${i === 10 ? 'text-right' : 'text-left'}`}>
                       {col}
                     </th>
                   ))}
@@ -267,7 +267,7 @@ export default function JobsPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={9} className="py-16 text-center">
+                  <tr><td colSpan={11} className="py-16 text-center">
                     <div className="flex justify-center"><div className="w-7 h-7 rounded-full border-2 border-[#e2e8f0] border-t-[#f54900] animate-spin"/></div>
                   </td></tr>
                 ) : jobs.length === 0 ? (
@@ -281,8 +281,23 @@ export default function JobsPage() {
                     </td>
 
                     <td className="px-4 py-[15px]">
-                      <p className="text-[#0f172b] text-[14px] font-medium leading-[20px] whitespace-nowrap">{job.client_name}</p>
-                      <p className="text-[#90a1b9] text-[12px] leading-[16px] mt-0.5 max-w-[200px] truncate">{job.client_address}</p>
+                      <p className="text-[#0f172b] text-[14px] font-medium leading-[20px] whitespace-nowrap">{job.client_name || '—'}</p>
+                    </td>
+
+                    <td className="px-4 py-[15px] whitespace-nowrap">
+                      <div className="flex items-center gap-1.5 text-[13px] text-[#314158]">
+                        <span className="font-semibold text-[#0f172b]">{job.insured_name || 'No Name'}</span>
+                        <span className="text-[#90a1b9]">•</span>
+                        <span>{job.insured_phone || 'No Phone'}</span>
+                        <span className="text-[#90a1b9]">•</span>
+                        <span className="text-[#62748e]">{job.insured_email || 'No Email'}</span>
+                      </div>
+                    </td>
+
+                    <td className="px-4 py-[15px]">
+                      <p className="text-[#314158] text-[13px] leading-[18px] max-w-[220px] truncate" title={job.insured_address || 'No Address'}>
+                        {job.insured_address || 'No Address'}
+                      </p>
                     </td>
 
                     <td className="px-4 py-[15px] whitespace-nowrap">
