@@ -26,10 +26,15 @@ function FilterSelect({ value, onChange, options, placeholder, icon: Icon }) {
 }
 
 const STATUS_OPTS = [
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'pending',     label: 'Pending'      },
-  { value: 'completed',   label: 'Completed'    },
-  { value: 'overdue',     label: 'Overdue'      },
+  { value: 'scheduled',           label: 'Scheduled'           },
+  { value: 'pending',             label: 'To be booked'        },
+  { value: 'in_progress',         label: 'In Progress'         },
+  { value: 'on_hold',             label: 'On Hold'             },
+  { value: 'to_invoice',          label: 'To Invoice'          },
+  { value: 'completed',           label: 'Completed'           },
+  { value: 'cancelled',           label: 'Cancelled'           },
+  { value: 'emergency_make_safe', label: 'Emergency Make Safe' },
+  { value: 'overdue',             label: 'Overdue'             },
 ]
 
 const DATE_OPTS = [

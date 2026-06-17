@@ -52,11 +52,16 @@ function StatCard({ icon: Icon, iconBg, iconColor, label, value }) {
 
 // ── Status tabs (values match API) ────────────────────────────────────────────
 const STATUS_TABS = [
-  { label: 'All',         value: '' },
-  { label: 'In Progress', value: 'in_progress' },
-  { label: 'Pending',     value: 'pending' },
-  { label: 'Completed',   value: 'completed' },
-  { label: 'Overdue',     value: 'overdue' },
+  { label: 'All',                 value: '' },
+  { label: 'To be booked',        value: 'pending' },
+  { label: 'Scheduled',           value: 'scheduled' },
+  { label: 'In Progress',         value: 'in_progress' },
+  { label: 'On Hold',             value: 'on_hold' },
+  { label: 'To Invoice',          value: 'to_invoice' },
+  { label: 'Completed',           value: 'completed' },
+  { label: 'Cancelled',           value: 'cancelled' },
+  { label: 'Emergency Make Safe', value: 'emergency_make_safe' },
+  { label: 'Overdue',             value: 'overdue' },
 ]
 
 // ── Manager filter options (fetched from API) ─────────────────────────────────
@@ -106,11 +111,16 @@ export default function JobsPage() {
 
   // ── Tab counts from dashboard ──────────────────────────────────────────────
   const tabCounts = {
-    '':            dashStats?.total_jobs      ?? 0,
-    'in_progress': dashStats?.active_jobs     ?? 0,
-    'pending':     dashStats?.pending_jobs    ?? 0,
-    'completed':   dashStats?.completed_jobs  ?? 0,
-    'overdue':     dashStats?.overdue_jobs    ?? 0,
+    '':                    dashStats?.total_jobs      ?? 0,
+    'pending':             dashStats?.pending_jobs    ?? 0,
+    'scheduled':           dashStats?.scheduled_jobs  ?? 0,
+    'in_progress':         dashStats?.active_jobs     ?? 0,
+    'on_hold':             dashStats?.on_hold_jobs    ?? 0,
+    'to_invoice':          dashStats?.to_invoice_jobs ?? 0,
+    'completed':           dashStats?.completed_jobs  ?? 0,
+    'cancelled':           dashStats?.cancelled_jobs  ?? 0,
+    'emergency_make_safe': dashStats?.emergency_make_safe_jobs ?? 0,
+    'overdue':             dashStats?.overdue_jobs    ?? 0,
   }
 
   // ── Fetch dashboard stats ──────────────────────────────────────────────────
@@ -259,7 +269,7 @@ export default function JobsPage() {
               <thead className="sticky top-0 z-10">
                 <tr className="bg-[#f8fafc] border-b border-[#e2e8f0]">
                   {['Job ID', 'Client Details', 'Insured Details', 'Insured Address', 'Schedule', 'Assigned To', 'Vehicle', 'Status', 'Priority', 'Created', ''].map((col, i) => (
-                    <th key={i} className={`px-4 py-[13px] text-[13px] font-bold text-[#62748e] leading-[20px] whitespace-nowrap ${i === 10 ? 'text-right' : 'text-left'}`}>
+                    <th key={i} className={`px-2.5 py-[11px] text-[12px] font-bold text-[#62748e] leading-[18px] whitespace-nowrap ${i === 10 ? 'text-right' : 'text-left'}`}>
                       {col}
                     </th>
                   ))}
@@ -276,65 +286,63 @@ export default function JobsPage() {
                   <tr key={job.id} onClick={() => navigate(`/admin/jobs/${job.id}`)}
                     className="border-b border-[#f1f5f9] last:border-b-0 hover:bg-[#fafafa] transition-colors cursor-pointer group">
 
-                    <td className="px-4 py-[15px] whitespace-nowrap">
-                      <span className="font-['Consolas',monospace] font-bold text-[13px] text-[#f54900]">{job.job_id}</span>
+                    <td className="px-2.5 py-[10px] whitespace-nowrap">
+                      <span className="font-['Consolas',monospace] font-bold text-[12px] text-[#f54900]">{job.job_id}</span>
                     </td>
 
-                    <td className="px-4 py-[15px]">
-                      <p className="text-[#0f172b] text-[14px] font-medium leading-[20px] whitespace-nowrap">{job.client_name || '—'}</p>
+                    <td className="px-2.5 py-[10px] max-w-[130px]">
+                      <p className="text-[#0f172b] text-[13px] font-medium leading-[18px] truncate" title={job.client_name || '—'}>{job.client_name || '—'}</p>
                     </td>
 
-                    <td className="px-4 py-[15px] whitespace-nowrap">
-                      <div className="flex items-center gap-1.5 text-[13px] text-[#314158]">
-                        <span className="font-semibold text-[#0f172b]">{job.insured_name || 'No Name'}</span>
-                        <span className="text-[#90a1b9]">•</span>
-                        <span>{job.insured_phone || 'No Phone'}</span>
-                        <span className="text-[#90a1b9]">•</span>
-                        <span className="text-[#62748e]">{job.insured_email || 'No Email'}</span>
+                    <td className="px-2.5 py-[10px] max-w-[160px]">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-semibold text-[#0f172b] text-[12px] truncate" title={job.insured_name || 'No Name'}>{job.insured_name || 'No Name'}</span>
+                        <span className="text-[#45556c] text-[11px] truncate" title={job.insured_phone || 'No Phone'}>{job.insured_phone || 'No Phone'}</span>
+                        <span className="text-[#62748e] text-[11px] truncate" title={job.insured_email || 'No Email'}>{job.insured_email || 'No Email'}</span>
                       </div>
                     </td>
 
-                    <td className="px-4 py-[15px]">
-                      <p className="text-[#314158] text-[13px] leading-[18px] max-w-[220px] truncate" title={job.insured_address || 'No Address'}>
+                    <td className="px-2.5 py-[10px] max-w-[160px]">
+                      <p className="text-[#314158] text-[12px] leading-[18px] truncate" title={job.insured_address || 'No Address'}>
                         {job.insured_address || 'No Address'}
                       </p>
                     </td>
 
-                    <td className="px-4 py-[15px] whitespace-nowrap">
+                    <td className="px-2.5 py-[10px] whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
                         <IconCalendar />
-                        <span className="text-[#45556c] text-[13px]">
+                        <span className="text-[#45556c] text-[12px]">
                           {job.scheduled_datetime ? fmtDate(job.scheduled_datetime) : <span className="text-[#90a1b9] italic">Unscheduled</span>}
                         </span>
                       </div>
                     </td>
 
-                    <td className="px-4 py-[15px]">
+                    <td className="px-2.5 py-[10px] max-w-[120px]">
                       {job.assigned_to ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <Avatar name={job.assigned_to.full_name} />
-                          <span className="text-[#314158] text-[13px] whitespace-nowrap">{job.assigned_to.full_name}</span>
+                          <span className="text-[#314158] text-[12px] truncate" title={job.assigned_to.full_name}>{job.assigned_to.full_name}</span>
                         </div>
-                      ) : <span className="text-[#90a1b9] text-[13px] italic">Unassigned</span>}
+                      ) : <span className="text-[#90a1b9] text-[12px] italic">Unassigned</span>}
                     </td>
 
-                    <td className="px-4 py-[15px] whitespace-nowrap">
+                    <td className="px-2.5 py-[10px] whitespace-nowrap">
                       {job.has_fleet_issue ? (
-                        <span className="flex items-center gap-1.5 text-[#c10007] text-[12px]">
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1L11 10H1L6 1Z" stroke="#c10007" strokeWidth="1.1" strokeLinejoin="round"/><path d="M6 4.5v2.5" stroke="#c10007" strokeWidth="1.1" strokeLinecap="round"/></svg>
+                        <span className="flex items-center gap-1.5 text-[#c10007] text-[11px]">
+                          <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1L11 10H1L6 1Z" stroke="#c10007" strokeWidth="1.1" strokeLinejoin="round"/><path d="M6 4.5v2.5" stroke="#c10007" strokeWidth="1.1" strokeLinecap="round"/></svg>
                           Fleet Issue
                         </span>
-                      ) : <span className="text-[#90a1b9] text-[13px]">No issues</span>}
+                      ) : <span className="text-[#90a1b9] text-[11px]">No issues</span>}
                     </td>
 
-                    <td className="px-4 py-[15px]"><StatusBadge status={job.status} /></td>
-                    <td className="px-4 py-[15px]"><PriorityBadge priority={job.priority} /></td>
+                    <td className="px-2.5 py-[10px]"><StatusBadge status={job.status} /></td>
+                    <td className="px-2.5 py-[10px]"><PriorityBadge priority={job.priority} /></td>
 
-                    <td className="px-4 py-[15px] whitespace-nowrap">
-                      <span className="text-[#62748e] text-[12px]">{fmtDate(job.created_at)}</span>
+                    <td className="px-2.5 py-[10px] whitespace-nowrap">
+                      <span className="text-[#62748e] text-[11px]">{fmtDate(job.created_at)}</span>
                     </td>
 
-                    <td className="px-4 py-[15px] text-right" onClick={e => e.stopPropagation()}>
+                    <td className="px-2.5 py-[10px] text-right" onClick={e => e.stopPropagation()}>
                       <JobsActionMenu job={job} jobId={job.id} onDelete={() => setDeleteTarget(job)} onEdit={() => setEditTarget(job)} />
                     </td>
                   </tr>
