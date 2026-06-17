@@ -295,10 +295,10 @@ export default function JobsPage() {
                     </td>
 
                     <td className="px-2.5 py-[10px] max-w-[160px]">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-semibold text-[#0f172b] text-[12px] truncate" title={job.insured_name || 'No Name'}>{job.insured_name || 'No Name'}</span>
-                        <span className="text-[#45556c] text-[11px] truncate" title={job.insured_phone || 'No Phone'}>{job.insured_phone || 'No Phone'}</span>
-                        <span className="text-[#62748e] text-[11px] truncate" title={job.insured_email || 'No Email'}>{job.insured_email || 'No Email'}</span>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-[#0f172b] text-[12px] leading-[15px] truncate" title={job.insured_name || 'No Name'}>{job.insured_name || 'No Name'}</span>
+                        <span className="text-[#45556c] text-[11px] leading-[15px] truncate" title={job.insured_phone || 'No Phone'}>{job.insured_phone || 'No Phone'}</span>
+                        <span className="text-[#62748e] text-[11px] leading-[15px] truncate" title={job.insured_email || 'No Email'}>{job.insured_email || 'No Email'}</span>
                       </div>
                     </td>
 
