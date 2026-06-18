@@ -484,18 +484,18 @@ export default function FleetPage() {
               <table className="w-full min-w-[700px]">
                 <thead>
                   <tr className="border-b border-[#f1f5f9]">
-                    {['Vehicle', 'Plate', 'Status', 'Last Inspection', 'Next Service', 'Action'].map((col, i) => (
-                      <th key={col}
-                        className={['px-6 py-[14px] text-[13px] font-semibold text-[#62748e] leading-[18px] whitespace-nowrap', i === 5 ? 'text-right' : 'text-left'].join(' ')}>
-                        {col}
-                      </th>
-                    ))}
-                  </tr>
+                      {['Vehicle', 'Plate', 'Assigned Employee', 'Status', 'Last Inspection', 'Next Service', 'Action'].map((col, i) => (
+                        <th key={col}
+                          className={['px-6 py-[14px] text-[13px] font-semibold text-[#62748e] leading-[18px] whitespace-nowrap', i === 6 ? 'text-right' : 'text-left'].join(' ')}>
+                          {col}
+                        </th>
+                      ))}
+                    </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="py-16 text-center">
+                      <td colSpan={7} className="py-16 text-center">
                         <div className="flex justify-center">
                           <div className="w-7 h-7 rounded-full border-2 border-[#e2e8f0] border-t-[#f54900] animate-spin" />
                         </div>
@@ -503,7 +503,7 @@ export default function FleetPage() {
                     </tr>
                   ) : vehicles.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-20 text-center">
+                      <td colSpan={7} className="py-20 text-center">
                         <div className="flex flex-col items-center gap-4">
                           <div className="w-16 h-16 rounded-full bg-[#f8fafc] border-2 border-[#e2e8f0] flex items-center justify-center text-[#cad5e2]">
                             <IconTruck />
@@ -543,6 +543,14 @@ export default function FleetPage() {
 
                         <td className="px-6 py-[18px]">
                           <span className="text-[#45556c] text-[14px] font-mono">{vehicle.plate}</span>
+                        </td>
+
+                        <td className="px-6 py-[18px] max-w-[180px]">
+                          {vehicle.assigned_employee ? (
+                            <span className="text-[#314158] text-[14px] truncate">{vehicle.assigned_employee}</span>
+                          ) : (
+                            <span className="text-[#90a1b9] italic">Unassigned</span>
+                          )}
                         </td>
 
                         <td className="px-6 py-[18px]">
