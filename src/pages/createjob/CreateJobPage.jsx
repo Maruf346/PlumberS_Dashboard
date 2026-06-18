@@ -9,6 +9,7 @@ import { apiFetch } from '@/utils/apiFetch'
 import FormInput         from '@/components/shared/FormInput'
 import AddressInput      from '@/components/shared/AddressInput'
 import FormTextarea      from '@/components/shared/FormTextarea'
+import RichTextEditor    from '@/components/shared/RichTextEditor'
 import FormSelect        from '@/components/shared/FormSelect'
 import MultiSelect       from '@/components/shared/MultiSelect'
 import FormSectionHeader from '@/components/shared/FormSectionHeader'
@@ -182,7 +183,7 @@ export default function CreateJobPage({ onClose, onSaved }) {
 
   // ── Form state ─────────────────────────────────────────────────────────────
   const [form, setForm] = useState({
-    client_id: '', job_name: '', job_details: '', priority: '',
+    client_id: '', job_details: '', priority: '',
     safety_form_ids: [], report_type_ids: [],
     assigned_manager_ids: [], assigned_to_id: '', vehicle_id: '',
     // Insured Details — manual entry
@@ -214,7 +215,7 @@ export default function CreateJobPage({ onClose, onSaved }) {
   const validate = () => {
     const e = {}
     if (!form.client_id)                      e.client_id            = 'Please select a client'
-    if (!form.job_details.trim())             e.job_details          = 'Job details are required'
+    if (!form.job_details.trim())             e.job_details          = 'Job description is required'
     if (!form.priority)                       e.priority             = 'Priority is required'
     if (form.safety_form_ids.length === 0)    e.safety_form_ids      = 'Select at least one safety form'
     if (!form.assigned_to_id)                 e.assigned_to_id       = 'Please assign a staff member'
@@ -229,7 +230,6 @@ export default function CreateJobPage({ onClose, onSaved }) {
     setApiError('')
 
     const payload = {
-      job_name:             form.job_name.trim(),
       job_details:          form.job_details.trim(),
       priority:             form.priority,
       client_id:            form.client_id,
@@ -343,8 +343,12 @@ export default function CreateJobPage({ onClose, onSaved }) {
             {/* Section 3: Job Info */}
             <section className="flex flex-col gap-4">
               <FormSectionHeader icon={IconBriefcase} title="Job Info" />
-              <FormTextarea label="Job Details" id="job_details" value={form.job_details} onChange={set('job_details')}
-                placeholder="Describe the job scope and requirements…" required rows={4} error={errors.job_details} />
+              <div className="flex flex-col gap-2">
+                <label className="text-[#0f172b] text-[14px] font-semibold">Job Description <span className="text-[#f54900]">*</span></label>
+                <RichTextEditor value={form.job_details} onChange={set('job_details')}
+                  placeholder="Describe the job scope and requirements…" />
+                {errors.job_details && <p className="text-[#c10007] text-[12px] mt-1">{errors.job_details}</p>}
+              </div>
               <FormSelect label="Priority" id="priority" value={form.priority} onChange={set('priority')}
                 options={PRIORITY_OPTIONS} placeholder="Select priority…" required icon={IconFlag} error={errors.priority} />
             </section>
