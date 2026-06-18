@@ -110,7 +110,10 @@ export default function LineItemsTab({ job, onJobUpdate }) {
         <div>
           <h4 className="text-[#0f172b] font-bold text-[14px] leading-[20px] mb-3">Description</h4>
           <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] p-4">
-            <p className="text-[#45556c] text-[14px] leading-[24px]">{job.job_details}</p>
+            <div
+              className="text-[#45556c] text-[14px] leading-[24px]"
+              dangerouslySetInnerHTML={{ __html: job.job_details }}
+            />
           </div>
         </div>
       )}

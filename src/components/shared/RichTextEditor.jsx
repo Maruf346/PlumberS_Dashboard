@@ -53,7 +53,16 @@ async function loadEditor() {
     try {
       const { CKEditor } = await import('@ckeditor/ckeditor5-react').catch(() => ({}))
       const { default: CE } = await import('@ckeditor/ckeditor5-build-classic').catch(() => ({}))
+      const { Underline: UnderlinePlugin } = await import('@ckeditor/ckeditor5-basic-styles').catch(() => ({}))
+
       if (CKEditor && CE) {
+        if (UnderlinePlugin) {
+          const plugins = CE.builtinPlugins || []
+          if (!plugins.includes(UnderlinePlugin)) {
+            CE.builtinPlugins = [...plugins, UnderlinePlugin]
+            UnderlinePluginClass = UnderlinePlugin
+          }
+        }
         CKEditorComponent = CKEditor
         ClassicEditorClass = CE
         return true
