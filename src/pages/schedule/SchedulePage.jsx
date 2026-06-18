@@ -2022,7 +2022,7 @@ export default function SchedulePage() {
                     {note.staff?.[0] && (
                       <p className="text-[#62748e] text-[10px] truncate mt-0.5">{note.staff[0].full_name}</p>
                     )}
-                    {note.job?.insured_address && (
+                    {note.job?.address && (
                       <p className="text-[#62748e] text-[10px] truncate mt-0.5">{note.job.address}</p>
                     )}
                   </div>
