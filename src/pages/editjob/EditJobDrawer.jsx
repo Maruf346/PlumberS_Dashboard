@@ -259,7 +259,6 @@ export default function EditJobDrawer({ jobId, job, onClose, onSaved, onDeleted 
   const validate = () => {
     const e = {}
     if (!form.client_id)                         e.client_id            = 'Please select a client'
-    if (!form.job_name?.trim())                  e.job_name             = 'Job name is required'
     if (!form.job_details?.trim())               e.job_details          = 'Job details are required'
     if (!form.priority)                          e.priority             = 'Priority is required'
     if (!form.safety_form_ids?.length)           e.safety_form_ids      = 'Select at least one safety form'
@@ -393,20 +392,7 @@ export default function EditJobDrawer({ jobId, job, onClose, onSaved, onDeleted 
 
               <div className="h-px bg-[#f1f5f9]" />
 
-              {/* Section 2: Job Info */}
-              <section className="flex flex-col gap-4">
-                <FormSectionHeader icon={IconBriefcase} title="Job Info" />
-                <FormInput label="Job Name" id="job_name" value={form.job_name} onChange={set('job_name')}
-                  placeholder="e.g. Emergency Pipe Repair" required icon={IconBriefcase} error={errors.job_name} />
-                <FormTextarea label="Job Details" id="job_details" value={form.job_details} onChange={set('job_details')}
-                  placeholder="Describe the job scope…" required rows={4} error={errors.job_details} />
-                <FormSelect label="Priority" id="priority" value={form.priority} onChange={set('priority')}
-                  options={PRIORITY_OPTIONS} placeholder="Select priority…" required icon={IconFlag} error={errors.priority} />
-              </section>
-
-              <div className="h-px bg-[#f1f5f9]" />
-
-              {/* Section 3: Insured Details — manual entry */}
+              {/* Section 2: Insured Details — manual entry */}
               <section className="flex flex-col gap-4">
                 <FormSectionHeader icon={IconShield} title="Insured Details" />
                 <FormInput label="Insured Name" id="insured_name" value={form.insured_name} onChange={set('insured_name')}
@@ -421,6 +407,17 @@ export default function EditJobDrawer({ jobId, job, onClose, onSaved, onDeleted 
                   placeholder="Street address of the insured property" icon={IconMapPin} />
                 <FormTextarea label="Site Access Info" id="site_access_info" value={form.site_access_info} onChange={set('site_access_info')}
                   placeholder="Gate codes, access instructions, entry notes… (optional)" rows={3} />
+              </section>
+
+              <div className="h-px bg-[#f1f5f9]" />
+
+              {/* Section 3: Job Info */}
+              <section className="flex flex-col gap-4">
+                <FormSectionHeader icon={IconBriefcase} title="Job Info" />
+                <FormTextarea label="Job Details" id="job_details" value={form.job_details} onChange={set('job_details')}
+                  placeholder="Describe the job scope…" required rows={4} error={errors.job_details} />
+                <FormSelect label="Priority" id="priority" value={form.priority} onChange={set('priority')}
+                  options={PRIORITY_OPTIONS} placeholder="Select priority…" required icon={IconFlag} error={errors.priority} />
               </section>
 
               <div className="h-px bg-[#f1f5f9]" />
@@ -441,15 +438,15 @@ export default function EditJobDrawer({ jobId, job, onClose, onSaved, onDeleted 
               {/* Section 5: Assignment */}
               <section className="flex flex-col gap-4">
                 <FormSectionHeader icon={IconUsers} title="Assignment" />
-                <MultiSelect label="Assign Manager(s)" id="assigned_manager_ids" options={managers}
-                  value={form.assigned_manager_ids} onChange={set('assigned_manager_ids')}
-                  placeholder="Select one or more managers…" icon={IconUserCog} error={errors.assigned_manager_ids} />
                 <FormSelect label="Assign Staff" id="assigned_to_id" value={form.assigned_to_id}
                   onChange={set('assigned_to_id')} options={staff}
                   placeholder="Select staff member…" required icon={IconUserCheck} error={errors.assigned_to_id} />
                 <FormSelect label="Vehicle" id="vehicle_id" value={form.vehicle_id}
                   onChange={set('vehicle_id')} options={vehicles}
                   placeholder="Select vehicle… (optional)" icon={IconTruck} />
+                <MultiSelect label="Assign Manager(s)" id="assigned_manager_ids" options={managers}
+                  value={form.assigned_manager_ids} onChange={set('assigned_manager_ids')}
+                  placeholder="Select one or more managers…" icon={IconUserCog} error={errors.assigned_manager_ids} />
               </section>
 
               <div className="h-px bg-[#f1f5f9]" />

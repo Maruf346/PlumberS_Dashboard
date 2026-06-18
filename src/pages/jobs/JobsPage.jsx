@@ -268,8 +268,8 @@ export default function JobsPage() {
             <table className="w-full min-w-[900px]">
               <thead className="sticky top-0 z-10">
                 <tr className="bg-[#f8fafc] border-b border-[#e2e8f0]">
-                  {['Job ID', 'Client Details', 'Insured Details', 'Insured Address', 'Schedule', 'Assigned To', 'Vehicle', 'Status', 'Priority', 'Created', ''].map((col, i) => (
-                    <th key={i} className={`px-2.5 py-[11px] text-[12px] font-bold text-[#62748e] leading-[18px] whitespace-nowrap ${i === 10 ? 'text-right' : 'text-left'}`}>
+                  {['Job ID', 'Client Details', 'Insured Details', 'Insured Address', 'Schedule', 'Assigned To', 'Status', 'Priority', 'Created', ''].map((col, i) => (
+                    <th key={i} className={`px-2.5 py-[11px] text-[12px] font-bold text-[#62748e] leading-[18px] whitespace-nowrap ${i === 9 ? 'text-right' : 'text-left'}`}>
                       {col}
                     </th>
                   ))}
@@ -277,7 +277,7 @@ export default function JobsPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={11} className="py-16 text-center">
+                  <tr><td colSpan={10} className="py-16 text-center">
                     <div className="flex justify-center"><div className="w-7 h-7 rounded-full border-2 border-[#e2e8f0] border-t-[#f54900] animate-spin"/></div>
                   </td></tr>
                 ) : jobs.length === 0 ? (
@@ -324,15 +324,6 @@ export default function JobsPage() {
                           <span className="text-[#314158] text-[12px] truncate" title={job.assigned_to.full_name}>{job.assigned_to.full_name}</span>
                         </div>
                       ) : <span className="text-[#90a1b9] text-[12px] italic">Unassigned</span>}
-                    </td>
-
-                    <td className="px-2.5 py-[10px] whitespace-nowrap">
-                      {job.has_fleet_issue ? (
-                        <span className="flex items-center gap-1.5 text-[#c10007] text-[11px]">
-                          <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1L11 10H1L6 1Z" stroke="#c10007" strokeWidth="1.1" strokeLinejoin="round"/><path d="M6 4.5v2.5" stroke="#c10007" strokeWidth="1.1" strokeLinecap="round"/></svg>
-                          Fleet Issue
-                        </span>
-                      ) : <span className="text-[#90a1b9] text-[11px]">No issues</span>}
                     </td>
 
                     <td className="px-2.5 py-[10px]"><StatusBadge status={job.status} /></td>
