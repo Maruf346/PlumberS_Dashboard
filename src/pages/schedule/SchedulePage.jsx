@@ -262,6 +262,7 @@ function NoteDetailPopup({ note, position }) {
   }
 
   const firstStaff = note.staff?.[0]
+  const displayName = note.job?.client_name ? note.job.client_name : 'Unassigned'
   return (
     <div className="fixed z-[60] bg-white rounded-[12px] shadow-[0_10px_40px_rgba(15,23,43,0.3)] border border-[#e2e8f0] p-4 w-[280px]"
       style={{ ...popupStyle, pointerEvents: 'none' }}>
@@ -283,8 +284,8 @@ function NoteDetailPopup({ note, position }) {
         )}
         <div className="flex items-center justify-between">
           <span className="text-[#62748e]">Staff:</span>
-          <span className={`font-semibold ${firstStaff ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
-            {firstStaff ? firstStaff.full_name : 'Unassigned'}
+          <span className={`font-semibold ${displayName && displayName !== 'Unassigned' ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
+            {displayName}
           </span>
         </div>
         <div className="flex items-center justify-between">
@@ -325,6 +326,7 @@ function NoteChip({ note, onDragStart, onClick, onContextMenu }) {
   const colorStyle  = hexToCardStyle(firstStaff?.color ?? null)
   const fallback    = colorStyle ? null : getEmployeeColor(firstStaff?.id ?? null)
   const jobStatus   = note.job ? (STATUS_CHIP[apiStatusToDisplay(note.job.status)] ?? DEFAULT_CHIP) : null
+  const displayName = note.job?.client_name ? note.job.client_name : 'Unassigned'
   const [popupPos, setPopupPos] = useState(null)
   const chipRef = useRef(null)
 
@@ -351,8 +353,8 @@ function NoteChip({ note, onDragStart, onClick, onContextMenu }) {
               {note.job.job_id}
             </span>
           )}
-          <span className={`text-[11px] font-bold line-clamp-1 ${firstStaff ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
-            {firstStaff ? firstStaff.full_name : 'Unassigned'}
+          <span className={`text-[11px] font-bold line-clamp-1 ${displayName && displayName !== 'Unassigned' ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
+            {displayName}
           </span>
         </div>
         <p className="text-[13px] font-bold text-[#0f172b] leading-[16px] break-words line-clamp-2">
@@ -422,6 +424,7 @@ function WeekNoteCard({
   const colorStyle   = hexToCardStyle(firstStaff?.color ?? null)
   const fallback     = colorStyle ? null : getEmployeeColor(firstStaff?.id ?? null)
   const jobStatus    = note.job ? (STATUS_CHIP[apiStatusToDisplay(note.job.status)] ?? DEFAULT_CHIP) : null
+  const displayName  = note.job?.client_name ? note.job.client_name : 'Unassigned'
 
   const [liveHeight,  setLiveHeight]  = useState(height)
   const [isResizing,  setIsResizing]  = useState(false)
@@ -524,8 +527,8 @@ function WeekNoteCard({
               </span>
             )}
             {showStaff && (
-              <span className={`text-[11px] font-bold truncate ${firstStaff ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
-                {firstStaff ? firstStaff.full_name : 'Unassigned'}
+              <span className={`text-[11px] font-bold truncate ${displayName && displayName !== 'Unassigned' ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
+                {displayName}
               </span>
             )}
           </div>
