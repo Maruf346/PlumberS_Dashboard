@@ -351,8 +351,8 @@ function NoteChip({ note, onDragStart, onClick, onContextMenu }) {
               {note.job.job_id}
             </span>
           )}
-          <span className={`text-[11px] font-bold line-clamp-1 ${firstStaff ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
-            {firstStaff ? firstStaff.full_name : 'Unassigned'}
+          <span className={`text-[11px] font-bold line-clamp-1 ${note.job.client_name ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
+            {note.job.client_name ? note.job.client_name : 'Unassigned'}
           </span>
         </div>
         <p className="text-[13px] font-bold text-[#0f172b] leading-[16px] break-words line-clamp-2">
@@ -524,8 +524,8 @@ function WeekNoteCard({
               </span>
             )}
             {showStaff && (
-              <span className={`text-[11px] font-bold truncate ${firstStaff ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
-                {firstStaff ? firstStaff.full_name : 'Unassigned'}
+              <span className={`text-[11px] font-bold truncate ${note.job.client_name ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
+                {note.job.client_name ? note.job.client_name : 'Unassigned'}
               </span>
             )}
           </div>
