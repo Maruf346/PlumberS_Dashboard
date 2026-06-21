@@ -262,7 +262,8 @@ function NoteDetailPopup({ note, position }) {
   }
 
   const firstStaff = note.staff?.[0]
-  const displayName = note.job?.client_name ? note.job.client_name : 'Unassigned'
+  const employeeName = firstStaff ? firstStaff.full_name : 'Unassigned'
+  const clientDisplay = note.job?.client_name ? note.job.client_name : '○'
   return (
     <div className="fixed z-[60] bg-white rounded-[12px] shadow-[0_10px_40px_rgba(15,23,43,0.3)] border border-[#e2e8f0] p-4 w-[280px]"
       style={{ ...popupStyle, pointerEvents: 'none' }}>
@@ -273,7 +274,10 @@ function NoteDetailPopup({ note, position }) {
         {note.job && (
           <div className="flex items-center justify-between">
             <span className="text-[#62748e]">Job:</span>
-            <span className="font-semibold text-[#0f172b]">{note.job.job_id}</span>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-[#0f172b]">{note.job.job_id}</span>
+              <span className={`font-semibold ${note.job?.client_name ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>{clientDisplay}</span>
+            </div>
           </div>
         )}
         {note.job?.address && (
@@ -282,12 +286,14 @@ function NoteDetailPopup({ note, position }) {
             <span className="font-semibold text-[#0f172b] text-right leading-[15px] max-w-[160px]">{note.job.address}</span>
           </div>
         )}
-        <div className="flex items-center justify-between">
-          <span className="text-[#62748e]">Staff:</span>
-          <span className={`font-semibold ${displayName && displayName !== 'Unassigned' ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
-            {displayName}
-          </span>
-        </div>
+        {(firstStaff || !firstStaff) && (
+          <div className="flex items-center justify-between">
+            <span className="text-[#62748e]">Staff:</span>
+            <span className={`text-[12px] ${firstStaff ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
+              {employeeName}
+            </span>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <span className="text-[#62748e]">Time:</span>
           <span className="font-semibold text-[#0f172b]">
@@ -326,7 +332,8 @@ function NoteChip({ note, onDragStart, onClick, onContextMenu }) {
   const colorStyle  = hexToCardStyle(firstStaff?.color ?? null)
   const fallback    = colorStyle ? null : getEmployeeColor(firstStaff?.id ?? null)
   const jobStatus   = note.job ? (STATUS_CHIP[apiStatusToDisplay(note.job.status)] ?? DEFAULT_CHIP) : null
-  const displayName = note.job?.client_name ? note.job.client_name : 'Unassigned'
+  const clientDisplay = note.job?.client_name ? note.job.client_name : '○'
+  const employeeName = firstStaff ? firstStaff.full_name : 'Unassigned'
   const [popupPos, setPopupPos] = useState(null)
   const chipRef = useRef(null)
 
@@ -353,8 +360,8 @@ function NoteChip({ note, onDragStart, onClick, onContextMenu }) {
               {note.job.job_id}
             </span>
           )}
-          <span className={`text-[11px] font-bold line-clamp-1 ${displayName && displayName !== 'Unassigned' ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
-            {displayName}
+          <span className={`text-[11px] font-bold line-clamp-1 ${note.job?.client_name ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
+            {clientDisplay}
           </span>
         </div>
         <p className="text-[13px] font-bold text-[#0f172b] leading-[16px] break-words line-clamp-2">
@@ -363,6 +370,7 @@ function NoteChip({ note, onDragStart, onClick, onContextMenu }) {
         {note.job?.address && (
           <p className="text-[10px] text-[#62748e] leading-[13px] line-clamp-1">{note.job.address}</p>
         )}
+        <p className="text-[10px] text-[#314158]">{employeeName}</p>
         {note.tasks?.length > 0 && (
           <div className="flex flex-col gap-0.5">
             {note.tasks.slice(0, 2).map(t => (
@@ -424,7 +432,8 @@ function WeekNoteCard({
   const colorStyle   = hexToCardStyle(firstStaff?.color ?? null)
   const fallback     = colorStyle ? null : getEmployeeColor(firstStaff?.id ?? null)
   const jobStatus    = note.job ? (STATUS_CHIP[apiStatusToDisplay(note.job.status)] ?? DEFAULT_CHIP) : null
-  const displayName  = note.job?.client_name ? note.job.client_name : 'Unassigned'
+  const clientDisplay = note.job?.client_name ? note.job.client_name : '○'
+  const employeeName = firstStaff ? firstStaff.full_name : 'Unassigned'
 
   const [liveHeight,  setLiveHeight]  = useState(height)
   const [isResizing,  setIsResizing]  = useState(false)
@@ -527,8 +536,8 @@ function WeekNoteCard({
               </span>
             )}
             {showStaff && (
-              <span className={`text-[11px] font-bold truncate ${displayName && displayName !== 'Unassigned' ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
-                {displayName}
+              <span className={`text-[11px] font-bold truncate ${note.job?.client_name ? 'text-[#0f172b]' : 'text-[#90a1b9]'}`}>
+                {clientDisplay}
               </span>
             )}
           </div>
@@ -541,6 +550,10 @@ function WeekNoteCard({
 
           {showAddress && note.job?.address && (
             <p className="text-[10px] text-[#62748e] leading-[13px] truncate mt-0.5">{note.job.address}</p>
+          )}
+
+          {showAddress && (
+            <p className="text-[10px] text-[#314158] leading-[13px] truncate">{employeeName}</p>
           )}
 
           {showTasks && (
