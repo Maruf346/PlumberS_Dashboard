@@ -218,7 +218,6 @@ export default function CreateJobPage({ onClose, onSaved }) {
     if (!form.job_details.trim())             e.job_details          = 'Job description is required'
     if (!form.priority)                       e.priority             = 'Priority is required'
     if (form.safety_form_ids.length === 0)    e.safety_form_ids      = 'Select at least one safety form'
-    if (!form.assigned_to_id)                 e.assigned_to_id       = 'Please assign a staff member'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -233,7 +232,7 @@ export default function CreateJobPage({ onClose, onSaved }) {
       job_details:          form.job_details.trim(),
       priority:             form.priority,
       client_id:            form.client_id,
-      assigned_to_id:       form.assigned_to_id,
+      assigned_to_id:       form.assigned_to_id || null,
       assigned_manager_ids: form.assigned_manager_ids,
       safety_form_ids:      form.safety_form_ids,
       report_type_ids:      form.report_type_ids,
@@ -373,7 +372,7 @@ export default function CreateJobPage({ onClose, onSaved }) {
               <FormSectionHeader icon={IconUsers} title="Assignment" />
               <FormSelect label="Assign Staff" id="assigned_to_id" value={form.assigned_to_id}
                 onChange={handleStaffChange} options={staff}
-                placeholder="Select staff member…" required icon={IconUserCheck} error={errors.assigned_to_id} />
+                placeholder="Select staff member… (optional)" icon={IconUserCheck} error={errors.assigned_to_id} />
               {/* Vehicle — auto-filled from staff's assigned vehicle, but fully editable */}
               <div className="flex flex-col gap-[6px]">
                 <FormSelect label="Vehicle" id="vehicle_id" value={form.vehicle_id}
@@ -391,7 +390,7 @@ export default function CreateJobPage({ onClose, onSaved }) {
               </div>
               <MultiSelect label="Assign Manager(s)" id="assigned_manager_ids" options={managers}
                 value={form.assigned_manager_ids} onChange={set('assigned_manager_ids')}
-                placeholder="Select one or more managers…" icon={IconUserCog} error={errors.assigned_manager_ids} />
+                placeholder="Select one or more managers… (optional)" icon={IconUserCog} error={errors.assigned_manager_ids} />
             </section>
 
             <div className="h-px bg-[#f1f5f9]" />
