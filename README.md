@@ -125,3 +125,4 @@ Key custom tokens defined in `tailwind.config.js`:
 | `border` | `#e2e8f0` | Default border |
 | `w-sidebar` | `256px` | Sidebar width |
 | `h-header` | `61px` | Header height |
+
