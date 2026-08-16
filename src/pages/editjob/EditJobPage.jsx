@@ -15,6 +15,13 @@ import MultiSelect       from '@/components/shared/MultiSelect'
 import FormSectionHeader from '@/components/shared/FormSectionHeader'
 import StatusBadge       from '@/components/shared/StatusBadge'
 import DeleteJobModal    from '@/components/editjob/DeleteJobModal'
+import {
+  getAssignedCustomReportIds,
+  getAssignedReportTypeIds,
+  makeReportOptions,
+  makeReportSelectionValue,
+  splitReportSelectionValue,
+} from '@/utils/reportSelection'
 
 // ── Icons (same palette as CreateJobPage) ─────────────────────────────────────
 function IconArrowLeft() { return <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12.5 15L7.5 10l5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg> }
@@ -197,6 +204,7 @@ export default function EditJobPage() {
   const [vehicles,    setVehicles]    = useState([])
   const [safetyForms, setSafetyForms] = useState([])
   const [reportTypes, setReportTypes] = useState([])
+  const [customReports, setCustomReports] = useState([])
   const [loadingOpts, setLoadingOpts] = useState(true)
 
   // ── Job + form state ───────────────────────────────────────────────────────
@@ -222,14 +230,16 @@ export default function EditJobPage() {
       apiFetch('fleet/?include_inactive=false'),
       apiFetch('safety-forms/?all=true'),
       apiFetch('reports/types/'),
+      apiFetch('custom-reports/'),
       apiFetch(`jobs/${jobId}/`),
-    ]).then(([c, m, s, v, sf, rt, j]) => {
+    ]).then(([c, m, s, v, sf, rt, cr, j]) => {
       if (c.ok)  setClients(c.data?.results ?? c.data ?? [])
       if (m.ok)  setManagers((m.data?.results ?? []).map(x => ({ value: x.id, label: x.full_name })))
       if (s.ok)  setStaff((s.data?.results ?? []).map(x => ({ value: x.id, label: x.full_name })))
       if (v.ok)  setVehicles((v.data?.results ?? []).map(x => ({ value: x.id, label: `${x.name} · ${x.plate}` })))
       if (sf.ok) setSafetyForms((sf.data?.results ?? sf.data ?? []).map(x => ({ value: x.id, label: x.name })))
       if (rt.ok) setReportTypes((Array.isArray(rt.data) ? rt.data : []).map(x => ({ value: x.value, label: x.label })))
+      if (cr.ok) setCustomReports(cr.data?.results ?? cr.data ?? [])
       if (j.ok && j.data) {
         const d = j.data
         setJob(d)
@@ -240,7 +250,8 @@ export default function EditJobPage() {
           job_details:          d.job_details                           ?? '',
           priority:             d.priority                              ?? '',
           safety_form_ids:      (d.safety_forms ?? []).map(f => f.id),
-          report_type_ids:      (d.reports ?? []).map(r => r.report_type),
+          report_type_ids:      getAssignedReportTypeIds(d),
+          custom_report_ids:    getAssignedCustomReportIds(d),
           assigned_manager_ids: (d.assigned_managers ?? []).map(m => m.id),
           assigned_to_id:       d.assigned_to?.id                      ?? '',
           vehicle_id:           d.vehicle?.id                           ?? '',
@@ -252,6 +263,17 @@ export default function EditJobPage() {
   }, [jobId])
 
   const selectedClient = clients.find(c => c.id === form?.client_id) ?? null
+  const reportOptions = makeReportOptions(reportTypes, customReports)
+  const selectedReportValues = makeReportSelectionValue(form?.report_type_ids, form?.custom_report_ids)
+
+  const handleReportChange = (values) => {
+    const split = splitReportSelectionValue(values)
+    setForm(prev => ({
+      ...prev,
+      report_type_ids: split.report_type_ids,
+      custom_report_ids: split.custom_report_ids,
+    }))
+  }
 
   // ── Validation ─────────────────────────────────────────────────────────────
   const validate = () => {
@@ -280,6 +302,7 @@ export default function EditJobPage() {
       assigned_manager_ids: form.assigned_manager_ids,
       safety_form_ids:      form.safety_form_ids,
       report_type_ids:      form.report_type_ids,
+      custom_report_ids:    form.custom_report_ids,
       ...(form.vehicle_id ? { vehicle_id: form.vehicle_id } : { vehicle_id: null }),
     }
 
@@ -409,9 +432,10 @@ export default function EditJobPage() {
                   <MultiSelect label="Safety Requirement Form" id="safety_form_ids" options={safetyForms}
                     value={form.safety_form_ids} onChange={set('safety_form_ids')}
                     placeholder="Select safety form(s)…" required icon={IconShield} error={errors.safety_form_ids} />
-                  <MultiSelect label="Report Types" id="report_type_ids" options={reportTypes}
-                    value={form.report_type_ids} onChange={set('report_type_ids')}
-                    placeholder="Select report type(s)…" icon={IconClipboard} />
+                  <MultiSelect label="Report Types" id="report_type_ids" options={reportOptions}
+                    value={selectedReportValues} onChange={handleReportChange}
+                    placeholder="Select report type(s)…" icon={IconClipboard}
+                    error={errors.report_type_ids || errors.custom_report_ids} />
                 </section>
 
                 <div className="h-px bg-[#f1f5f9]" />

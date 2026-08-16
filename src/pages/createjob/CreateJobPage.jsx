@@ -13,6 +13,12 @@ import RichTextEditor    from '@/components/shared/RichTextEditor'
 import FormSelect        from '@/components/shared/FormSelect'
 import MultiSelect       from '@/components/shared/MultiSelect'
 import FormSectionHeader from '@/components/shared/FormSectionHeader'
+import {
+  getDefaultCustomReportIds,
+  makeReportOptions,
+  makeReportSelectionValue,
+  splitReportSelectionValue,
+} from '@/utils/reportSelection'
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 function IconClose()      { return <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="#314158" strokeWidth="1.5" strokeLinecap="round"/></svg> }
@@ -160,6 +166,7 @@ export default function CreateJobPage({ onClose, onSaved }) {
   const [vehicles,      setVehicles]      = useState([])
   const [safetyForms,   setSafetyForms]   = useState([])
   const [reportTypes,   setReportTypes]   = useState([])
+  const [customReports, setCustomReports] = useState([])
   const [loadingOpts,   setLoadingOpts]   = useState(true)
 
   useEffect(() => {
@@ -170,13 +177,26 @@ export default function CreateJobPage({ onClose, onSaved }) {
       apiFetch('fleet/?include_inactive=false'),
       apiFetch('safety-forms/?all=true'),
       apiFetch('reports/types/'),
-    ]).then(([c, m, s, v, sf, rt]) => {
+      apiFetch('custom-reports/'),
+    ]).then(([c, m, s, v, sf, rt, cr]) => {
       if (c.ok)  setClients((c.data?.results   ?? c.data ?? []))
       if (m.ok)  setManagers((m.data?.results  ?? []).map(x => ({ value: x.id, label: x.full_name })))
       if (s.ok)  setStaff((s.data?.results     ?? []).map(x => ({ value: x.id, label: x.full_name })))
       if (v.ok)  setVehicles((v.data?.results  ?? []).map(x => ({ value: x.id, label: `${x.name} · ${x.plate}` })))
       if (sf.ok) setSafetyForms((sf.data?.results ?? sf.data ?? []).map(x => ({ value: x.id, label: x.name })))
       if (rt.ok) setReportTypes((Array.isArray(rt.data) ? rt.data : []).map(x => ({ value: x.value, label: x.label })))
+      if (cr.ok) {
+        const reports = cr.data?.results ?? cr.data ?? []
+        setCustomReports(reports)
+        const defaultIds = getDefaultCustomReportIds(reports)
+        if (defaultIds.length) {
+          setForm(prev => (
+            prev.report_type_ids.length || prev.custom_report_ids.length
+              ? prev
+              : { ...prev, custom_report_ids: defaultIds }
+          ))
+        }
+      }
       setLoadingOpts(false)
     })
   }, [])
@@ -184,7 +204,7 @@ export default function CreateJobPage({ onClose, onSaved }) {
   // ── Form state ─────────────────────────────────────────────────────────────
   const [form, setForm] = useState({
     client_id: '', job_details: '', priority: '',
-    safety_form_ids: [], report_type_ids: [],
+    safety_form_ids: [], report_type_ids: [], custom_report_ids: [],
     assigned_manager_ids: [], assigned_to_id: '', vehicle_id: '',
     // Insured Details — manual entry
     insured_name: '', insured_phone: '', insured_email: '', insured_address: '', site_access_info: '',
@@ -197,6 +217,8 @@ export default function CreateJobPage({ onClose, onSaved }) {
   const [fetchingVehicle, setFetchingVehicle] = useState(false)
 
   const selectedClient = clients.find(c => c.id === form.client_id) ?? null
+  const reportOptions = makeReportOptions(reportTypes, customReports)
+  const selectedReportValues = makeReportSelectionValue(form.report_type_ids, form.custom_report_ids)
 
   // ── Staff selection — auto-fill vehicle from employee's assigned vehicle ────
   const handleStaffChange = async (staffId) => {
@@ -209,6 +231,15 @@ export default function CreateJobPage({ onClose, onSaved }) {
       set('vehicle_id')(data.assigned_vehicle.id)
     }
     setFetchingVehicle(false)
+  }
+
+  const handleReportChange = (values) => {
+    const split = splitReportSelectionValue(values)
+    setForm(prev => ({
+      ...prev,
+      report_type_ids: split.report_type_ids,
+      custom_report_ids: split.custom_report_ids,
+    }))
   }
 
   // ── Validation ─────────────────────────────────────────────────────────────
@@ -236,6 +267,7 @@ export default function CreateJobPage({ onClose, onSaved }) {
       assigned_manager_ids: form.assigned_manager_ids,
       safety_form_ids:      form.safety_form_ids,
       report_type_ids:      form.report_type_ids,
+      custom_report_ids:    form.custom_report_ids,
       ...(form.vehicle_id ? { vehicle_id: form.vehicle_id } : {}),
       // Insured Details
       insured_name:     form.insured_name.trim(),
@@ -360,9 +392,10 @@ export default function CreateJobPage({ onClose, onSaved }) {
               <MultiSelect label="Safety Requirement Form" id="safety_form_ids" options={safetyForms}
                 value={form.safety_form_ids} onChange={set('safety_form_ids')}
                 placeholder="Select safety form template(s)…" required icon={IconShield} error={errors.safety_form_ids} />
-              <MultiSelect label="Report Types" id="report_type_ids" options={reportTypes}
-                value={form.report_type_ids} onChange={set('report_type_ids')}
-                placeholder="Select report type(s)… (optional)" icon={IconClipboard} />
+              <MultiSelect label="Report Types" id="report_type_ids" options={reportOptions}
+                value={selectedReportValues} onChange={handleReportChange}
+                placeholder="Select report type(s)… (optional)" icon={IconClipboard}
+                error={errors.report_type_ids || errors.custom_report_ids} />
             </section>
 
             <div className="h-px bg-[#f1f5f9]" />

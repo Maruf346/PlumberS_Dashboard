@@ -1,7 +1,7 @@
 // src/components/shared/MultiSelect.jsx
 // Custom multi-select with pill tags — matches the form design system exactly.
 // Props:
-//   label, id, options [{ value, label }], value (array of values),
+//   label, id, options [{ value, label, dividerBefore?, groupLabel? }], value (array of values),
 //   onChange (receives new array), placeholder, required, error, icon
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -183,37 +183,47 @@ export default function MultiSelect({
               ) : filtered.map(opt => {
                 const isSelected = value.includes(opt.value)
                 return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    role="option"
-                    aria-selected={isSelected}
-                    onClick={(e) => { e.stopPropagation(); toggle(opt.value) }}
-                    className={[
-                      'flex items-center justify-between w-full px-3 py-2 text-left',
-                      'text-[13px] leading-5 transition-colors',
-                      isSelected
-                        ? 'bg-[#fff3ee] text-[#c73b00] font-medium'
-                        : 'text-[#314158] hover:bg-[#f8fafc]',
-                    ].join(' ')}
-                  >
-                    <span className="flex items-center gap-2.5">
-                      {/* Avatar circle with initial */}
-                      <span
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
-                        style={{ backgroundColor: isSelected ? '#f54900' : '#90a1b9' }}
-                      >
-                        {opt.label.charAt(0)}
-                      </span>
-                      {opt.label}
-                    </span>
-
-                    {isSelected && (
-                      <span className="text-[#f54900] shrink-0">
-                        <IconCheck />
-                      </span>
+                  <div key={opt.value}>
+                    {opt.dividerBefore && (
+                      <div className="mx-3 my-1.5 border-t border-dashed border-[#cad5e2] pt-2">
+                        {opt.groupLabel && (
+                          <p className="text-[10px] font-bold uppercase tracking-[0.6px] text-[#90a1b9] px-0.5 pb-1">
+                            {opt.groupLabel}
+                          </p>
+                        )}
+                      </div>
                     )}
-                  </button>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      onClick={(e) => { e.stopPropagation(); toggle(opt.value) }}
+                      className={[
+                        'flex items-center justify-between w-full px-3 py-2 text-left',
+                        'text-[13px] leading-5 transition-colors',
+                        isSelected
+                          ? 'bg-[#fff3ee] text-[#c73b00] font-medium'
+                          : 'text-[#314158] hover:bg-[#f8fafc]',
+                      ].join(' ')}
+                    >
+                      <span className="flex items-center gap-2.5">
+                        {/* Avatar circle with initial */}
+                        <span
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                          style={{ backgroundColor: isSelected ? '#f54900' : '#90a1b9' }}
+                        >
+                          {opt.label.charAt(0)}
+                        </span>
+                        {opt.label}
+                      </span>
+
+                      {isSelected && (
+                        <span className="text-[#f54900] shrink-0">
+                          <IconCheck />
+                        </span>
+                      )}
+                    </button>
+                  </div>
                 )
               })}
             </div>

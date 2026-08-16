@@ -16,6 +16,13 @@ import MultiSelect       from '@/components/shared/MultiSelect'
 import FormSectionHeader from '@/components/shared/FormSectionHeader'
 import StatusBadge       from '@/components/shared/StatusBadge'
 import DeleteJobModal    from '@/components/editjob/DeleteJobModal'
+import {
+  getAssignedCustomReportIds,
+  getAssignedReportTypeIds,
+  makeReportOptions,
+  makeReportSelectionValue,
+  splitReportSelectionValue,
+} from '@/utils/reportSelection'
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 function IconClose()     { return <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="#314158" strokeWidth="1.5" strokeLinecap="round"/></svg> }
@@ -198,6 +205,7 @@ export default function EditJobDrawer({ jobId, job, onClose, onSaved, onDeleted 
   const [vehicles,    setVehicles]    = useState([])
   const [safetyForms, setSafetyForms] = useState([])
   const [reportTypes, setReportTypes] = useState([])
+  const [customReports, setCustomReports] = useState([])
   const [loadingOpts, setLoadingOpts] = useState(true)
 
   const [form,        setForm]        = useState(null)
@@ -221,7 +229,8 @@ export default function EditJobDrawer({ jobId, job, onClose, onSaved, onDeleted 
       job_details:          job.job_details                           ?? '',
       priority:             job.priority                              ?? '',
       safety_form_ids:      (job.safety_forms   ?? []).map(f => f.id),
-      report_type_ids:      (job.reports        ?? []).map(r => r.report_type),
+      report_type_ids:      getAssignedReportTypeIds(job),
+      custom_report_ids:    getAssignedCustomReportIds(job),
       assigned_manager_ids: (job.assigned_managers ?? []).map(m => m.id),
       assigned_to_id:       job.assigned_to?.id                      ?? '',
       vehicle_id:           job.vehicle?.id                          ?? '',
@@ -243,18 +252,31 @@ export default function EditJobDrawer({ jobId, job, onClose, onSaved, onDeleted 
       apiFetch('fleet/?include_inactive=false'),
       apiFetch('safety-forms/?all=true'),
       apiFetch('reports/types/'),
-    ]).then(([c, m, s, v, sf, rt]) => {
+      apiFetch('custom-reports/'),
+    ]).then(([c, m, s, v, sf, rt, cr]) => {
       if (c.ok)  setClients(c.data?.results ?? c.data ?? [])
       if (m.ok)  setManagers((m.data?.results ?? []).map(x => ({ value: x.id, label: x.full_name })))
       if (s.ok)  setStaff((s.data?.results ?? []).map(x => ({ value: x.id, label: x.full_name })))
       if (v.ok)  setVehicles((v.data?.results ?? []).map(x => ({ value: x.id, label: `${x.name} · ${x.plate}` })))
       if (sf.ok) setSafetyForms((sf.data?.results ?? sf.data ?? []).map(x => ({ value: x.id, label: x.name })))
       if (rt.ok) setReportTypes((Array.isArray(rt.data) ? rt.data : []).map(x => ({ value: x.value, label: x.label })))
+      if (cr.ok) setCustomReports(cr.data?.results ?? cr.data ?? [])
       setLoadingOpts(false)
     })
   }, [])
 
   const selectedClient = clients.find(c => c.id === form?.client_id) ?? null
+  const reportOptions = makeReportOptions(reportTypes, customReports)
+  const selectedReportValues = makeReportSelectionValue(form?.report_type_ids, form?.custom_report_ids)
+
+  const handleReportChange = (values) => {
+    const split = splitReportSelectionValue(values)
+    setForm(prev => ({
+      ...prev,
+      report_type_ids: split.report_type_ids,
+      custom_report_ids: split.custom_report_ids,
+    }))
+  }
 
   // ── Validate ───────────────────────────────────────────────────────────────
   const validate = () => {
@@ -282,6 +304,7 @@ export default function EditJobDrawer({ jobId, job, onClose, onSaved, onDeleted 
       assigned_manager_ids: form.assigned_manager_ids,
       safety_form_ids:      form.safety_form_ids,
       report_type_ids:      form.report_type_ids,
+      custom_report_ids:    form.custom_report_ids,
       vehicle_id:           form.vehicle_id || null,
       // Insured Details
       insured_name:         form.insured_name.trim(),
@@ -432,9 +455,10 @@ export default function EditJobDrawer({ jobId, job, onClose, onSaved, onDeleted 
                 <MultiSelect label="Safety Requirement Form" id="safety_form_ids" options={safetyForms}
                   value={form.safety_form_ids} onChange={set('safety_form_ids')}
                   placeholder="Select safety form(s)…" required icon={IconShield} error={errors.safety_form_ids} />
-                <MultiSelect label="Report Types" id="report_type_ids" options={reportTypes}
-                  value={form.report_type_ids} onChange={set('report_type_ids')}
-                  placeholder="Select report type(s)…" icon={IconClipboard} />
+                <MultiSelect label="Report Types" id="report_type_ids" options={reportOptions}
+                  value={selectedReportValues} onChange={handleReportChange}
+                  placeholder="Select report type(s)…" icon={IconClipboard}
+                  error={errors.report_type_ids || errors.custom_report_ids} />
               </section>
 
               <div className="h-px bg-[#f1f5f9]" />
