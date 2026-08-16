@@ -34,11 +34,11 @@ export const navItems = [
   { path: 'schedule',     label: 'Schedule',     icon: 'schedule'     },
   { path: 'fleet',        label: 'Fleet',        icon: 'fleet'        },
   { path: 'safety-forms', label: 'Safety Forms', icon: 'safety'       },
+  { path: 'reports',      label: 'Reports',      icon: 'reports'      },
   // { path: 'employees',    label: 'Employees',    icon: 'employees'    },  // hidden — uncomment to restore
   { path: 'managers',     label: 'Managers',     icon: 'managers'     },
   { path: 'staff',        label: 'Employees',        icon: 'staff'        },
   { path: 'clients',      label: 'Clients',      icon: 'clients'      },
-  { path: 'reports',      label: 'Reports',      icon: 'reports'      },
   { path: 'settings',     label: 'Settings',     icon: 'settings'     },
 ]
 

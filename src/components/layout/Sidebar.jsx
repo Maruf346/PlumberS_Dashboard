@@ -97,7 +97,7 @@ const NAV_GROUPS = [
   },
   {
     label: 'Field Ops',
-    items: ['jobs', 'schedule', 'fleet', 'safety-forms'],
+    items: ['jobs', 'schedule', 'fleet', 'safety-forms', 'reports'],
   },
   {
     label: 'People',

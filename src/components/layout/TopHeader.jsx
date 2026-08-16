@@ -35,7 +35,7 @@ const NAV_LINKS = [
   { label: 'Managers',     path: '/admin/managers',     icon: '👔' },
   { label: 'Employees',    path: '/admin/staff',        icon: '👷' },
   { label: 'Clients',      path: '/admin/clients',      icon: '🏢' },
-  // { label: 'Reports',      path: '/admin/reports',      icon: '📊' },
+  { label: 'Reports',      path: '/admin/reports',      icon: '📊' },
   { label: 'Settings',     path: '/admin/settings',     icon: '⚙️' },
 ]
 
