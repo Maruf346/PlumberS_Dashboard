@@ -247,7 +247,6 @@ export default function CreateJobPage({ onClose, onSaved }) {
     const e = {}
     if (!form.client_id)                      e.client_id            = 'Please select a client'
     if (!form.job_details.trim())             e.job_details          = 'Job description is required'
-    if (!form.priority)                       e.priority             = 'Priority is required'
     if (form.safety_form_ids.length === 0)    e.safety_form_ids      = 'Select at least one safety form'
     setErrors(e)
     return Object.keys(e).length === 0
@@ -261,7 +260,7 @@ export default function CreateJobPage({ onClose, onSaved }) {
 
     const payload = {
       job_details:          form.job_details.trim(),
-      priority:             form.priority,
+      priority:             form.priority || null,
       client_id:            form.client_id,
       assigned_to_id:       form.assigned_to_id || null,
       assigned_manager_ids: form.assigned_manager_ids,
@@ -381,7 +380,7 @@ export default function CreateJobPage({ onClose, onSaved }) {
                 {errors.job_details && <p className="text-[#c10007] text-[12px] mt-1">{errors.job_details}</p>}
               </div>
               <FormSelect label="Priority" id="priority" value={form.priority} onChange={set('priority')}
-                options={PRIORITY_OPTIONS} placeholder="Select priority…" required icon={IconFlag} error={errors.priority} />
+                options={PRIORITY_OPTIONS} placeholder="Select priority… (optional)" icon={IconFlag} error={errors.priority} />
             </section>
 
             <div className="h-px bg-[#f1f5f9]" />

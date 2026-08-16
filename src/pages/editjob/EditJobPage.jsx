@@ -281,7 +281,6 @@ export default function EditJobPage() {
     if (!form.client_id)                       e.client_id            = 'Please select a client'
     if (!form.job_name?.trim())                e.job_name             = 'Job name is required'
     if (!form.job_details?.trim())             e.job_details          = 'Job details are required'
-    if (!form.priority)                        e.priority             = 'Priority is required'
     if (form.safety_form_ids?.length === 0)    e.safety_form_ids      = 'Select at least one safety form'
     setErrors(e)
     return Object.keys(e).length === 0
@@ -296,7 +295,7 @@ export default function EditJobPage() {
     const payload = {
       job_name:             form.job_name.trim(),
       job_details:          form.job_details.trim(),
-      priority:             form.priority,
+      priority:             form.priority || null,
       client_id:            form.client_id,
       assigned_to_id:       form.assigned_to_id || null,
       assigned_manager_ids: form.assigned_manager_ids,
@@ -421,7 +420,7 @@ export default function EditJobPage() {
                   <FormTextarea label="Job Details" id="job_details" value={form.job_details} onChange={set('job_details')}
                     placeholder="Describe the job scope…" required rows={4} error={errors.job_details} />
                   <FormSelect label="Priority" id="priority" value={form.priority} onChange={set('priority')}
-                    options={PRIORITY_OPTIONS} placeholder="Select priority…" required icon={IconFlag} error={errors.priority} />
+                    options={PRIORITY_OPTIONS} placeholder="Select priority… (optional)" icon={IconFlag} error={errors.priority} />
                 </section>
 
                 <div className="h-px bg-[#f1f5f9]" />
